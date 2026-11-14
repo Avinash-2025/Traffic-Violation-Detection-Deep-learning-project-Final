@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel Vanguard — Traffic Violation Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+  <!-- Hidden Native File Upload Input -->
+  <input type="file" id="native-file-input" accept="video/mp4,video/avi,video/quicktime,video/x-matroska" style="display: none;">
+
+  <!-- Upload Progress Bar -->
+  <div class="upload-progress-bar" id="upload-progress" style="width: 0%; display: none;"></div>
+
+  <!-- ===== TOP HEADER NAVBAR ===== -->
+  <header class="header-bar">
+    <div class="header-left">
+      <div class="app-logo">
+        <i data-lucide="shield-alert" style="width: 20px; height: 20px;"></i>
+      </div>
+      <div class="app-title-group">
+        <span class="app-title">Sentinel Vanguard</span>
+        <span class="app-subtitle">TRAFFIC VIOLATION DETECTION</span>
+      </div>
+    </div>
+
+    <nav class="header-nav">
+      <button class="nav-tab-btn active" id="nav-overview" onclick="switchView('overview')">
+        <i data-lucide="layout-grid" style="width: 15px; height: 15px;"></i>
+        <span>Overview</span>
+      </button>
+      <button class="nav-tab-btn" id="nav-live" onclick="switchView('live')">
+        <i data-lucide="camera" style="width: 15px; height: 15px;"></i>
+        <span>Live Monitor</span>
+      </button>
+      <button class="nav-tab-btn" id="nav-analyzer" onclick="switchView('analyzer')">
+        <i data-lucide="file-video" style="width: 15px; height: 15px;"></i>
+        <span>Video Analyzer</span>
+      </button>
+      <button class="nav-tab-btn" id="nav-history" onclick="switchView('history')">
+        <i data-lucide="history" style="width: 15px; height: 15px;"></i>
+        <span>Incident History</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- ===== MAIN APP VIEWS ===== -->
+  <main class="main-view-container">
+
+    <!-- ====================================================================
+         VIEW 1: OVERVIEW / HOME PAGE
+         ==================================================================== -->
+    <section id="view-overview" class="view-section active">
+      <div class="overview-hero-grid">
+        <div class="hero-content-card">
+          <div>
+            <h1 class="hero-headline">
+              Every violation leaves a <span class="highlight-emerald">pixel signature.</span>
+            </h1>
+            <p class="hero-desc">
+              Sentinel Vanguard continuously inspects surveillance streams and recorded forensic footage. Four coordinated YOLOv5 backbones evaluate vehicle positioning, rider helmet compliance, passenger occupancy, and stop line crossings with immediate evidentiary archiving.
+            </p>
+            <div class="hero-actions-row">
+              <button class="btn-primary-emerald" onclick="switchView('analyzer')">
+                <i data-lucide="video" style="width: 16px; height: 16px;"></i>
+                <span>Open Video Analyzer</span>
+              </button>
+              <button class="btn-secondary" onclick="switchView('live')">
+                <i data-lucide="camera" style="width: 16px; height: 16px;"></i>
+                <span>Launch Live Camera</span>
+              </button>
+            </div>
+          </div>
+          <div class="hero-micro-stats">
+            <div class="micro-stat-item">
+              <span class="micro-stat-label">SAMPLING</span>
+              <span class="micro-stat-val">30 FPS Live Stream</span>
+            </div>
+            <div class="micro-stat-item">
+              <span class="micro-stat-label">MODELS</span>
+              <span class="micro-stat-val">4 YOLOv5 Backbones</span>
+            </div>
+            <div class="micro-stat-item">
+              <span class="micro-stat-label">RESOLUTION</span>
+              <span class="micro-stat-val">1280 × 720 HD Native</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Network Telemetry Card -->
+        <div class="telemetry-overview-card">
+          <div class="telemetry-card-header">
+            <span class="telemetry-title">
+              <i data-lucide="activity" style="width: 15px; height: 15px; color: var(--color-emerald);"></i>
+              System Telemetry & Health
+            </span>
+            <span class="pill-active-badge">ONLINE</span>
+          </div>
+          <div class="telemetry-grid">
+            <div class="telemetry-box">
+              <div class="telemetry-box-label">INFERENCE LATENCY</div>
+              <div class="telemetry-box-val">&lt; 35 ms</div>
+              <div class="telemetry-box-sub">Real-time Stream Engine</div>
+            </div>
+            <div class="telemetry-box">
+              <div class="telemetry-box-label">DETECTION ACCURACY</div>
+              <div class="telemetry-box-val">94.2%</div>
+              <div class="telemetry-box-sub">Multi-Model Fused</div>
+            </div>
+            <div class="telemetry-box">
+              <div class="telemetry-box-label">FORENSIC CAPTURE</div>
+              <div class="telemetry-box-val">Instant</div>
+              <div class="telemetry-box-sub">Automated Snapshot Archiving</div>
+            </div>
+            <div class="telemetry-box">
+              <div class="telemetry-box-label">DISPATCH TIME</div>
+              <div class="telemetry-box-val">0.2 sec</div>
+              <div class="telemetry-box-sub">Incident Vault Logging</div>
+            </div>
+          </div>
+          <div class="telemetry-sub-heading">
+            SURVEILLANCE ACTIVITY (LAST 7 DAYS)
+          </div>
+          <div class="telemetry-activity-bar">
+            <span>07 Nov</span><span>08 Nov</span><span>09 Nov</span><span>10 Nov</span><span>11 Nov</span><span>12 Nov</span><span class="activity-today">13 Nov (Active)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two Views, One Engine -->
+      <div class="section-headline-group">
+        <h2 class="section-title-large">Surveillance Modes & Workflows</h2>
+      </div>
+      <div class="two-views-grid">
+        <div class="view-card" onclick="switchView('live')">
+          <div class="view-card-tag">CAMERA VIEW</div>
+          <div class="view-card-body">
+            <h3 class="view-card-title">Live camera surveillance</h3>
+            <p class="view-card-desc">Connect a webcam or run a procedural scenario at 1.6 fps. Tracker brackets, a threat meter and an audio alert fire the moment the signal spikes, and the incident is filed automatically.</p>
+            <ul class="view-card-features">
+              <li><i data-lucide="check"></i> <span>Webcam + 4 simulator scenarios</span></li>
+              <li><i data-lucide="check"></i> <span>On-screen tracker & threat meter</span></li>
+              <li><i data-lucide="check"></i> <span>Auto-filed incidents</span></li>
+            </ul>
+          </div>
+          <div class="view-card-action-link">
+            <span>OPEN LIVE MONITOR →</span>
+          </div>
+        </div>
+        <div class="view-card" onclick="switchView('analyzer')">
+          <div class="view-card-tag">VIDEO UPLOAD VIEW</div>
+          <div class="view-card-body">
+            <h3 class="view-card-title">Forensic video ingestion</h3>
+            <p class="view-card-desc">Drop an MP4, WebM or MOV and the whole clip is sampled frame by frame. You get collision markers on the scrubber, keyframe clippings and a full report card you can save to the archive.</p>
+            <ul class="view-card-features">
+              <li><i data-lucide="check"></i> <span>Timestamped collision markers</span></li>
+              <li><i data-lucide="check"></i> <span>Keyframe clipping gallery</span></li>
+              <li><i data-lucide="check"></i> <span>Report card + JSON & PDF export</span></li>
+            </ul>
+          </div>
+          <div class="view-card-action-link">
+            <span>OPEN VIDEO ANALYZER →</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Heuristics -->
+      <div class="section-headline-group">
+        <h2 class="section-title-large">Multi-Model Detection Architecture</h2>
+      </div>
+      <div class="heuristics-grid">
+        <div class="heuristic-card">
+          <div class="heuristic-icon-box"><i data-lucide="car"></i></div>
+          <div class="heuristic-card-title">Vehicle Detection</div>
+          <div class="heuristic-card-desc">Fixed YOLOv5 backbone tracks cars, buses, trucks, motorcycles, and auto-rickshaws with SORT multi-target Kalman tracking.</div>
+        </div>
+        <div class="heuristic-card">
+          <div class="heuristic-icon-box"><i data-lucide="shield-check"></i></div>
+          <div class="heuristic-card-title">Helmet & Triple Riding</div>
+          <div class="heuristic-card-desc">Dual-head classifier identifies helmet compliance and counts passengers on motorcycles to flag overcrowded two-wheelers.</div>
+        </div>
+        <div class="heuristic-card">
+          <div class="heuristic-icon-box"><i data-lucide="traffic-cone"></i></div>
+          <div class="heuristic-card-title">Stop Line & Red Light</div>
+          <div class="heuristic-card-desc">Dynamic road stop line geometry combined with HSV signal color classification flags illegal intersection crossings.</div>
+        </div>
+        <div class="heuristic-card">
+          <div class="heuristic-icon-box"><i data-lucide="navigation"></i></div>
+          <div class="heuristic-card-title">Directional Flow Geometry</div>
+          <div class="heuristic-card-desc">Vehicle trajectory vectors compared against allowable roadway direction vectors automatically flag wrong-way drivers.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 2: VIDEO ANALYZER
+         ==================================================================== -->
+    <section id="view-analyzer" class="view-section">
+      <!-- Analyzer Top Bar -->
+      <div class="analyzer-topbar">
+        <div class="analyzer-video-pill">
+          <div class="video-pill-play">
+            <i data-lucide="play" style="width: 14px; height: 14px;"></i>
+          </div>
+          <div class="video-pill-title-group">
+            <span class="video-filename" id="current-video-display-name">Awaiting Video Ingestion</span>
+            <span class="pill-active-badge" id="video-state-badge">Idle</span>
+          </div>
+          <span class="video-meta-txt" id="analyzer-meta-counter">Frame 0 / 0 • 0.0 FPS</span>
+        </div>
+
+        <div class="analyzer-actions">
+          <!-- Traffic Signal Status Widget (Compact 3-Lamp Pill + Text) -->
+          <div class="header-signal-widget-pill" id="header-signal-widget" style="display: none;">
+            <div class="signal-lamps-trio">
+              <div id="top-lamp-red" class="signal-lamp lamp-red"></div>
+              <div id="top-lamp-yellow" class="signal-lamp lamp-yellow"></div>
+              <div id="top-lamp-green" class="signal-lamp lamp-green active-glow"></div>
+            </div>
+            <span class="signal-status-text" id="top-signal-label">GREEN – GO</span>
+          </div>
+
+          <button class="btn-primary-emerald" onclick="triggerNativeFileUpload()">
+            <i data-lucide="upload" style="width: 14px; height: 14px;"></i>
+            <span>Upload Video</span>
+          </button>
+          <button class="btn-edit-markup" id="btn-edit-markup" onclick="openMarkupWizard()">
+            <i data-lucide="settings-2" style="width: 14px; height: 14px;"></i>
+            <span>Edit Markup</span>
+          </button>
+          <button class="btn-export-csv" id="btn-export-csv" onclick="exportCSVReport()" style="display: none;">
+            <i data-lucide="file-spreadsheet" style="width: 14px; height: 14px;"></i>
+            <span>Export CSV</span>
+          </button>
+          <button class="btn-pill-action btn-pill-remove" id="btn-remove-video" onclick="removeCurrentVideo()" style="display: none;" title="Unload active video file">
+            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+            <span>Remove Video</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main 2-Column Grid -->
+      <div class="analyzer-main-grid">
+        <!-- Left: Video Stage -->
+        <div class="video-stage-column">
+          <!-- On-screen Tools Bar -->
+          <div class="analyzer-tools-bar">
+            <div class="tools-segmented-group">
+              <button class="tool-btn active" id="tool-view" onclick="setTool('view')" data-tooltip="Pan & zoom view">
+                <i data-lucide="mouse-pointer" style="width: 14px; height: 14px;"></i>
+                <span>Normal View</span>
+              </button>
+              <button class="tool-btn" id="tool-stopline" onclick="setTool('stopline')" data-tooltip="Click two points to draw red stop line">
+                <i data-lucide="minus" style="width: 14px; height: 14px;"></i>
+                <span>Stop Line</span>
+              </button>
+              <button class="tool-btn" id="tool-signal" onclick="setTool('signal')" data-tooltip="Click directly on traffic signal to place ROI (use Zoom for precision)">
+                <i data-lucide="crosshair" style="width: 14px; height: 14px;"></i>
+                <span>Signal ROI</span>
+              </button>
+              <button class="tool-btn" id="tool-detection" onclick="setTool('detection')" data-tooltip="Click boundary points, double-click to finish">
+                <i data-lucide="scan" style="width: 14px; height: 14px;"></i>
+                <span>Detection Area</span>
+              </button>
+              <button class="tool-btn" id="tool-direction" onclick="setTool('direction')" data-tooltip="Drag arrow for legal traffic flow (optional)">
+                <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                <span>Direction</span>
+              </button>
+            </div>
+
+            <!-- Precision Zoom Controls -->
+            <div class="zoom-controls-group">
+              <span class="zoom-controls-label"><i data-lucide="zoom-in" style="width: 12px; height: 12px;"></i> Zoom:</span>
+              <button class="tool-btn zoom-btn" id="btn-zoom-out" onclick="adjustZoom(-0.5)" title="Zoom Out">
+                <i data-lucide="minus" style="width: 12px; height: 12px;"></i>
+              </button>
+              <span class="zoom-level-badge" id="zoom-level-text">1.0x</span>
+              <button class="tool-btn zoom-btn" id="btn-zoom-in" onclick="adjustZoom(0.5)" title="Zoom In">
+                <i data-lucide="plus" style="width: 12px; height: 12px;"></i>
+              </button>
+              <button class="tool-btn zoom-btn" id="btn-zoom-reset" onclick="resetZoom()" title="Reset Zoom to Fit">Fit</button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button class="btn-open-guide-pill" id="btn-open-guide-pill" onclick="openMarkupWizard()" data-tooltip="Open marking popup with live step-by-step guide">
+                <i data-lucide="compass" style="width: 13px; height: 13px;"></i>
+                <span>Marking Menu & Guide</span>
+              </button>
+              <button class="tool-btn tool-btn-danger" id="tool-clear" onclick="clearMarkup()" data-tooltip="Reset all annotations">
+                <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i>
+                <span>Clear</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Hero Video -->
+          <div class="hero-video-wrapper" id="video-container">
+            <div class="badge-analyzer-feed">
+              <span class="feed-dot"></span>
+              <span>ANALYZER FEED</span>
+            </div>
+            <div class="video-zoom-viewport" id="video-zoom-viewport">
+              <img src="/video_feed" alt="Surveillance Stream" class="hero-video-img" id="stream-img">
+              <canvas id="interactive-canvas" class="interactive-markup-canvas"></canvas>
+            </div>
+          </div>
+
+          <!-- Player Controls -->
+          <div class="hero-player-bar">
+            <button class="player-btn" id="btn-player-play" onclick="togglePlayPause()">
+              <i data-lucide="pause" id="player-play-icon" style="width: 14px; height: 14px;"></i>
+              <span id="player-play-text">Pause</span>
+            </button>
+            <button class="player-btn" onclick="seekFrame(0)">
+              <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
+              <span>Replay</span>
+            </button>
+            <button class="player-btn">
+              <i data-lucide="volume-x" style="width: 14px; height: 14px;"></i>
+              <span>Muted</span>
+            </button>
+            <div class="seek-container">
+              <input type="range" min="0" max="100" value="0" class="seek-input" id="seek-slider" oninput="onSeekSlider(this.value)">
+            </div>
+            <div class="time-frame-readout" id="time-display">00:00 / 00:00</div>
+            <div class="pill-active-badge" id="player-fps" style="font-family: var(--font-mono);">0.0 FPS</div>
+          </div>
+        </div>
+
+        <!-- Right Column: Traffic Violations Statistics & Snapshot -->
+        <div class="telemetry-stack-column">
+          <!-- Traffic Violation Statistics Card -->
+          <div class="card-telemetry-live card-violation-stats">
+            <div class="card-telemetry-header">
+              <span class="telemetry-header-title">VIOLATION STATISTICS</span>
+              <span class="badge-live-sensor">LIVE AUDIT</span>
+            </div>
+
+            <!-- 4 Stat Counters Grid -->
+            <div class="violation-stats-grid">
+              <!-- Red Light / Traffic Signal Jumps -->
+              <div class="vstat-card vstat-redlight">
+                <div class="vstat-icon"><i data-lucide="traffic-cone" style="width: 18px; height: 18px;"></i></div>
+                <div class="vstat-body">
+                  <div class="vstat-count" id="stat-redlight">0</div>
+                  <div class="vstat-label">Signal Jumps</div>
+                  <div class="vstat-sub">Red Light Crossings</div>
+                </div>
+              </div>
+              <!-- No Helmet -->
+              <div class="vstat-card vstat-helmet">
+                <div class="vstat-icon"><i data-lucide="alert-circle" style="width: 18px; height: 18px;"></i></div>
+                <div class="vstat-body">
+                  <div class="vstat-count" id="stat-nohelmet">0</div>
+                  <div class="vstat-label">No Helmet</div>
+                  <div class="vstat-sub">Unprotected Riders</div>
+                </div>
+              </div>
+              <!-- Triple Riding -->
+              <div class="vstat-card vstat-triple">
+                <div class="vstat-icon"><i data-lucide="users" style="width: 18px; height: 18px;"></i></div>
+                <div class="vstat-body">
+                  <div class="vstat-count" id="stat-tripleriding">0</div>
+                  <div class="vstat-label">Triple Riding</div>
+                  <div class="vstat-sub">3+ On Motorcycle</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Violation Distribution Bar -->
+            <div class="vstat-distribution-container">
+              <div class="vstat-distribution-header">
+                <span>VIOLATION DISTRIBUTION</span>
+                <span id="vstat-total-violations">0 Infractions</span>
+              </div>
+              <div class="vstat-dist-bar-track">
+                <div class="vstat-dist-segment seg-red" id="dist-seg-red" style="width: 0%;"></div>
+                <div class="vstat-dist-segment seg-amber" id="dist-seg-amber" style="width: 0%;"></div>
+                <div class="vstat-dist-segment seg-purple" id="dist-seg-purple" style="width: 0%;"></div>
+              </div>
+              <div class="vstat-dist-legend">
+                <span><span class="legend-dot dot-red"></span> Red Light</span>
+                <span><span class="legend-dot dot-amber"></span> No Helmet</span>
+                <span><span class="legend-dot dot-purple"></span> Triple Riding</span>
+              </div>
+            </div>
+
+            <!-- Quick Engine Status Footer -->
+            <div class="vstat-system-footer">
+              <div class="vstat-sys-indicator">
+                <span class="feed-dot"></span>
+                <span>4 FIXED YOLOv5 BACKBONES ENGAGED</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Present Video Evidence Folder Shortcut -->
+          <div class="card-session-folder-shortcut" id="card-session-folder" style="display: none;">
+            <div class="session-folder-header">
+              <div class="session-folder-title-group">
+                <i data-lucide="folder" class="folder-main-icon" style="width: 16px; height: 16px;"></i>
+                <span class="session-folder-title">PRESENT VIDEO EVIDENCE FOLDER</span>
+              </div>
+              <span class="badge-folder-count" id="session-folder-badge">0 Snapshots</span>
+            </div>
+
+            <!-- Folder Shortcut Box (Desktop/Screen style folder shortcut) -->
+            <div class="session-folder-shortcut-bar" onclick="openCurrentSessionInVault()">
+              <div class="folder-shortcut-icon-box">
+                <i data-lucide="folder-archive" style="width: 22px; height: 22px; color: var(--color-emerald);"></i>
+              </div>
+              <div class="folder-shortcut-meta">
+                <div class="folder-shortcut-name" id="session-folder-name">No Video Loaded</div>
+                <div class="folder-shortcut-path" id="session-folder-path">Upload a video to initialize session storage</div>
+              </div>
+              <button class="btn-open-folder-link" type="button" title="Open in Incident History Vault">
+                <i data-lucide="external-link" style="width: 13px; height: 13px;"></i>
+                <span>Open Folder</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 3: INCIDENT HISTORY / EVIDENCE VAULT
+         ==================================================================== -->
+    <section id="view-history" class="view-section">
+      <div class="vault-header-bar">
+        <div class="vault-title-group">
+          <div class="vault-icon-badge">
+            <i data-lucide="archive" style="width: 24px; height: 24px;"></i>
+          </div>
+          <div>
+            <h2 class="vault-title">Incident Evidence Vault</h2>
+            <p class="vault-subtitle">Archived collision captures and forensic dossiers organized per upload session.</p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-danger-outline" onclick="clearIncidentHistory()">
+            <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+            <span>Clear History</span>
+          </button>
+        </div>
+      </div>
+      <!-- Sessions container -->
+      <div id="vault-sessions-container"></div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 4: LIVE MONITOR
+         ==================================================================== -->
+    <section id="view-live" class="view-section">
+      <div class="section-headline-group">
+        <span class="section-tagline">LIVE SURVEILLANCE</span>
+        <h2 class="section-title-large">Real-time CCTV & Camera Monitor</h2>
+      </div>
+      <div class="live-monitor-container">
+        <div class="live-monitor-hero">
+          <div class="badge-analyzer-feed" style="position: absolute; top: 16px; right: 16px;">
+            <span class="feed-dot"></span>
+            <span>LIVE CAM FEED</span>
+          </div>
+          <img src="/video_feed" alt="Live Feed" class="live-camera-video">
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button class="btn-primary-emerald" onclick="switchView('analyzer')">
+            <i data-lucide="sliders" style="width: 15px; height: 15px;"></i>
+            <span>Switch to Forensic Video Analyzer</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== MARKUP WIZARD MODAL ===== -->
+  <div class="markup-wizard-overlay" id="markup-wizard-overlay">
+    <div class="markup-wizard-panel">
+      <div class="wizard-header">
+        <div class="wizard-title-group">
+          <div class="wizard-icon">
+            <i data-lucide="map-pin" style="width: 22px; height: 22px;"></i>
+          </div>
+          <div>
+            <div class="wizard-title">Markup Configuration</div>
+            <div class="wizard-subtitle">Draw annotations on the video frame to define detection rules</div>
+          </div>
+        </div>
+        <button class="btn-secondary" onclick="closeMarkupWizard()" style="padding: 8px 16px;">
+          <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+          <span>Close</span>
+        </button>
+      </div>
+
+      <div class="wizard-body">
+        <!-- Left: Video + Drawing Canvas -->
+        <div class="wizard-video-panel">
+          <div class="wizard-tools-row">
+            <button class="tool-btn active" id="wiz-tool-view" onclick="setWizardTool('view')">
+              <i data-lucide="mouse-pointer" style="width: 13px; height: 13px;"></i>
+              <span>View</span>
+            </button>
+            <button class="tool-btn" id="wiz-tool-stopline" onclick="setWizardTool('stopline')">
+              <i data-lucide="minus" style="width: 13px; height: 13px;"></i>
+              <span>Stop Line</span>
+            </button>
+            <button class="tool-btn" id="wiz-tool-signal" onclick="setWizardTool('signal')">
+              <i data-lucide="crosshair" style="width: 13px; height: 13px;"></i>
+              <span>Signal ROI</span>
+            </button>
+            <button class="tool-btn" id="wiz-tool-detection" onclick="setWizardTool('detection')">
+              <i data-lucide="scan" style="width: 13px; height: 13px;"></i>
+              <span>Detection Area</span>
+            </button>
+            <button class="tool-btn" id="wiz-tool-direction" onclick="setWizardTool('direction')">
+              <i data-lucide="arrow-right" style="width: 13px; height: 13px;"></i>
+              <span>Direction</span>
+            </button>
+
+            <!-- Precision Zoom Controls in Wizard -->
+            <div class="zoom-controls-group" style="margin-left: auto;">
+              <span class="zoom-controls-label"><i data-lucide="zoom-in" style="width: 12px; height: 12px;"></i> Zoom:</span>
+              <button class="tool-btn zoom-btn" id="wiz-zoom-out" onclick="adjustWizardZoom(-0.5)" title="Zoom Out">
+                <i data-lucide="minus" style="width: 12px; height: 12px;"></i>
+              </button>
+              <span class="zoom-level-badge" id="wiz-zoom-level-text">1.0x</span>
+              <button class="tool-btn zoom-btn" id="wiz-zoom-in" onclick="adjustWizardZoom(0.5)" title="Zoom In">
+                <i data-lucide="plus" style="width: 12px; height: 12px;"></i>
+              </button>
+              <button class="tool-btn zoom-btn" id="wiz-zoom-reset" onclick="resetWizardZoom()" title="Reset Zoom">Fit</button>
+            </div>
+
+            <button class="tool-btn tool-btn-danger" onclick="clearMarkup()">
+              <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
+              <span>Clear</span>
+            </button>
+          </div>
+          <div class="wizard-video-container" id="wizard-video-container">
+            <div class="wizard-zoom-viewport" id="wizard-zoom-viewport">
+              <img src="/video_feed" alt="Frame Preview" class="wizard-video-img" id="wizard-stream-img">
+              <canvas id="wizard-canvas" class="wizard-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Step-by-Step Guide -->
+        <div class="wizard-guide-panel">
+          <div style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">MARKUP SETUP GUIDE</div>
+
+          <div class="guide-step active-step" id="guide-step-1" onclick="setWizardTool('stopline')">
+            <span class="guide-step-num">1</span>
+            <span class="guide-step-title">Draw Stop Line</span>
+            <div class="guide-step-desc">Click two points on the road to place the red stop line. Vehicles crossing this line during a RED signal are recorded as infractions.</div>
+            <div class="guide-step-hint">Click Stop Line tool, then click 2 points on the road →</div>
+          </div>
+
+          <div class="guide-step" id="guide-step-2" onclick="setWizardTool('signal')">
+            <span class="guide-step-num">2</span>
+            <span class="guide-step-title">Select Traffic Signal (Point Click)</span>
+            <div class="guide-step-desc">Click directly on the traffic light in the video or zoom in for precision. Point selection automatically centers the ROI target box over the lamp housing.</div>
+            <div class="guide-step-hint">Click directly on the traffic signal lamp →</div>
+          </div>
+
+          <div class="guide-step" id="guide-step-3" onclick="setWizardTool('detection')">
+            <span class="guide-step-num">3</span>
+            <span class="guide-step-title">Detection Area (Optional)</span>
+            <div class="guide-step-desc">Click boundary points to focus vehicle surveillance on specific road lanes. Double-click to close polygon (defaults to full video frame).</div>
+            <div class="guide-step-hint">Click points around road zone, double-click to finish →</div>
+          </div>
+
+          <div class="guide-step" id="guide-step-4" onclick="setWizardTool('direction')">
+            <span class="guide-step-num">4</span>
+            <span class="guide-step-title">Set Traffic Direction (Optional)</span>
+            <div class="guide-step-desc">Drag an arrow in the permitted road flow direction. If left unconfigured, wrong-way detection remains disabled to prevent false positives.</div>
+            <div class="guide-step-hint">Drag arrow from start to end in flow direction →</div>
+          </div>
+
+          <div style="flex: 1;"></div>
+
+          <div style="background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 11px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <i data-lucide="info" style="width: 14px; height: 14px; color: var(--color-emerald);"></i>
+              <span style="font-weight: 700; color: var(--color-cream);">Surveillance Guidance</span>
+            </div>
+            <ul style="color: var(--text-muted); line-height: 1.7; padding-left: 16px;">
+              <li>Full video frame is monitored by default</li>
+              <li>Use Zoom buttons (1.5x / 2.0x / 2.5x) to easily pinpoint small signal lamps</li>
+              <li>Reposition handles anytime using Normal View</li>
+              <li>Re-open wizard anytime using "Edit Markup"</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="wizard-footer">
+        <span class="wizard-skip-text" onclick="closeMarkupWizard()">Skip markup setup — use defaults</span>
+        <button class="btn-primary-emerald" onclick="submitMarkupAndStart()">
+          <i data-lucide="check" style="width: 15px; height: 15px;"></i>
+          <span>Apply Markup & Start Analysis</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LIGHTBOX MODAL ===== -->
+  <div class="lightbox-modal" id="lightbox-modal" onclick="closeLightbox(event)">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+      <button class="lightbox-close-btn" onclick="closeLightbox(event)">&times;</button>
+      <img id="lightbox-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="Enlarged Evidence" class="lightbox-img-tag">
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

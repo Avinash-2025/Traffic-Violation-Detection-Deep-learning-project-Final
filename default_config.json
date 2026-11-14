@@ -1,0 +1,138 @@
+{
+    "video_path": "uploads/real_traffic_cctv.mp4",
+    "detect_rrl": true,
+    "detect_hvd": true,
+    "detect_triple_riding": true,
+    "detect_wr": true,
+    "write_db": true,
+    "vehicle_detection": {
+        "model_path": "models/vehicle_detection/best.pt",
+        "imgsz": 640,
+        "conf_thres": 0.35,
+        "iou_thres": 0.45,
+        "classes_idx": [
+            0,
+            1,
+            2,
+            3,
+            4
+        ],
+        "classes_names": [
+            "Car",
+            "Motorcycle",
+            "Bus",
+            "Truck",
+            "Bycycle"
+        ],
+        "max_detection": 500,
+        "tracker": "SORT",
+        "detection_area": [
+            [
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                1.0
+            ],
+            [
+                1.0,
+                1.0
+            ],
+            [
+                1.0,
+                0.0
+            ]
+        ],
+        "sort_max_age": 80,
+        "sort_min_hits": 3,
+        "sort_iou_thres": 0.3,
+        "device": "cpu"
+    },
+    "running_red_light": {
+        "traffic_light_area": [
+            [
+                0.4,
+                0.4
+            ],
+            [
+                0.6,
+                0.4
+            ],
+            [
+                0.6,
+                0.6
+            ],
+            [
+                0.4,
+                0.6
+            ]
+        ],
+        "green_hsv_min": [
+            36,
+            25,
+            25
+        ],
+        "green_hsv_max": [
+            70,
+            255,
+            255
+        ],
+        "green_min_area": 10,
+        "red_hsv_min": [
+            0,
+            70,
+            50
+        ],
+        "red_hsv_max": [
+            10,
+            255,
+            255
+        ],
+        "red_min_area": 10,
+        "yellow_hsv_min": [
+            20,
+            100,
+            100
+        ],
+        "yellow_hsv_max": [
+            30,
+            255,
+            255
+        ],
+        "yellow_min_area": 10,
+        "stop_line": [
+            [
+                0.1,
+                0.2
+            ],
+            [
+                0.3,
+                0.4
+            ]
+        ],
+        "set_unknown_state": "yellow"
+    },
+    "helmet_violation": {
+        "model_path": "models/helmet_detection/best.pt",
+        "imgsz": 384,
+        "vehicle_idx": [
+            1,
+            4
+        ],
+        "violation_idx": 1,
+        "conf_thres": 0.35,
+        "min_age": 3,
+        "detect_interval": 1,
+        "triple_riding_threshold": 3,
+        "detect_triple_riding": true,
+        "detect_helmet_violation": true,
+        "device": "cpu"
+    },
+    "wrong_way": {
+        "direction_violation": 0,
+        "direction_violation_thr": 10,
+        "min_sigma_dy_dx_violation": 60,
+        "removal_miss_count": 300
+    }
+}

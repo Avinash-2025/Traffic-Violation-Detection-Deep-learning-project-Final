@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.DS_Store
+.DS_Store?
+._*
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Large model weights (>100MB exceeds GitHub push limit; downloaded via download_model.sh)
+models/vehicle_detection/*.pt
+models/helmet_detection/*.pt
+*.pt
+*.tar
+
+# Video recordings & Runtime Upload Sessions
+uploads/
+result/
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Temporary samples & dataset caches
+samples/
+dataset/
+
+# Workspace & Agent metadata
+.agent/
+.impeccable/
+.vscode/
+.idea/
