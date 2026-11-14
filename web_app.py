@@ -67,6 +67,8 @@ class VideoEngine:
         # Multi-session upload history for the Stats & Evidence Vault
         self.sessions = []
         self.current_session = None
+        self.detected_plates = []
+        self.seen_plates = set()
 
         self.markup = {
             "stop_lines": [],
@@ -186,6 +188,8 @@ class VideoEngine:
             # Reset counts for this video session
             self.recorded_events = []
             self.seen_violations = set()
+            self.detected_plates = []
+            self.seen_plates = set()
             self.counts = {
                 "red_light": 0,
                 "no_helmet": 0,
@@ -273,6 +277,41 @@ class VideoEngine:
                 elif "Wrong" in vtype:
                     self.counts["wrong_way"] += 1
 
+                # Record license plate for violation telemetry
+                if ev.get("plate_number"):
+                    plate_num = str(ev["plate_number"]).strip()
+                    is_visible = (plate_num != "NOT VISIBLE") and (ev.get("plate_visible", True) is not False)
+                    # Deduplicate: if visible, deduplicate by plate number; if NOT VISIBLE, deduplicate by (vehicle_id, type)
+                    if not is_visible:
+                        existing = next((p for p in self.detected_plates if p.get("vehicle_id") == ev["vehicle_id"] and p.get("type") == ev["type"]), None)
+                    else:
+                        existing = next((p for p in self.detected_plates if p["plate"] == plate_num), None)
+
+                    if existing is None:
+                        self.detected_plates.append({
+                            "id": len(self.detected_plates) + 1,
+                            "plate": plate_num,
+                            "is_visible": is_visible,
+                            "confidence": ev.get("plate_confidence", 0.0),
+                            "type": ev["type"],
+                            "vehicle_id": ev["vehicle_id"],
+                            "vehicle_type": ev.get("vehicle_type", "Vehicle"),
+                            "frame": frame_idx,
+                            "timestamp": timestamp,
+                            "created_at": ev["created_at"],
+                            "snapshot_url": ev.get("snapshot_url", ""),
+                        })
+                    else:
+                        existing["frame"] = frame_idx
+                        existing["timestamp"] = timestamp
+                        existing["is_visible"] = is_visible
+                        if ev.get("plate_confidence"):
+                            existing["confidence"] = ev.get("plate_confidence")
+                        if ev.get("snapshot_url"):
+                            existing["snapshot_url"] = ev["snapshot_url"]
+                        if ev.get("type"):
+                            existing["type"] = ev["type"]
+
         vd_cnt = len(getattr(self.pipeline, "latest_vd_result", []))
         self.counts["total_vehicles"] = max(self.counts["total_vehicles"], vd_cnt)
         if self.current_session:
@@ -312,8 +351,8 @@ class VideoEngine:
                     logging.exception(f"Pipeline update error at frame {self.current_frame_idx}: {exc}")
                     self.current_annotated_frame = frame.copy()
 
-                # Record violation events with high-res evidentiary snapshot
-                self._process_frame_events(frame, self.current_frame_idx, ts_str)
+                # Record violation events with high-res evidentiary snapshot (annotated with violation & plate boxes)
+                self._process_frame_events(self.current_annotated_frame, self.current_frame_idx, ts_str)
 
             dt = time.time() - t0
             self.current_fps = 1.0 / max(0.001, dt)
@@ -485,6 +524,8 @@ class VideoEngine:
                     "video_name": self.current_session["video_name"] if self.current_session else None,
                     "snapshot_count": len(self.current_session["events"]) if self.current_session else 0,
                 } if (self.current_session and self.video_path) else None,
+                "detected_plates": self.detected_plates[-20:],
+                "total_plates_count": len(self.detected_plates),
                 "ready_status": getattr(self.pipeline, "vd_ready_status", True) and getattr(self.pipeline, "hv_ready_status", True),
                 "models": {
                     "vehicle": {"name": "Vehicle Detector", "status": "Ready", "weights": "best.pt"},
@@ -548,6 +589,15 @@ def video_feed():
 @app.route("/api/status")
 def api_status():
     return jsonify(engine.get_status())
+
+
+@app.route("/api/detected_plates")
+def api_detected_plates():
+    with engine.lock:
+        return jsonify({
+            "plates": engine.detected_plates,
+            "total": len(engine.detected_plates),
+        })
 
 
 @app.route("/api/playback/play", methods=["POST"])

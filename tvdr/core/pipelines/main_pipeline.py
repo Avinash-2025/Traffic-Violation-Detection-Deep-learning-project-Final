@@ -7,6 +7,7 @@ from ..running_red_light.main_running_redlight import RunningRedLight
 from ..helmet_violation.main_helmet_violation import HelmetViolation
 from ..wrongway_detection.main_wrongway_detection import WrongWayDetection
 from .configuration_pipeline import PipelineConfig
+from ..plate_detection import PlateDetector
 from ...utils.annotator import Annotator
 
 
@@ -17,6 +18,8 @@ class Pipeline:
         self.rrl = RunningRedLight(self.config.rrl_config)
         self.hv = HelmetViolation(self.config.hv_config)
         self.ww = WrongWayDetection(self.config.ww_config)
+        self.plate_detector = PlateDetector()
+        self.latest_plates = {}
         self.annotator = Annotator(self.config)
 
     
@@ -90,6 +93,19 @@ class Pipeline:
             cls_id = int(obj[5])
             cls_name = self.config.vd_config.classes_names[cls_id] if cls_id < len(self.config.vd_config.classes_names) else "Vehicle"
 
+            is_violating = (vid in rrl_result) or (vid in tr_result) or (vid in hv_result) or (vid in ww_result)
+            plate_info = None
+            if is_violating:
+                plate_info = self.plate_detector.detect_plate(
+                    img, obj[0:4], vehicle_id=int(vid), video_name=getattr(self.config, "video_path", "")
+                )
+                self.latest_plates[vid] = plate_info
+
+            plate_number = plate_info["text"] if plate_info else None
+            plate_bbox = plate_info["bbox"] if plate_info else None
+            plate_confidence = plate_info.get("confidence", 0.0) if plate_info else None
+            plate_visible = plate_info.get("is_visible", False) if plate_info else None
+
             # Check Red light
             if vid in rrl_result:
                 new_events.append({
@@ -100,6 +116,10 @@ class Pipeline:
                     "type": "Running Red Light",
                     "details": f"{cls_name} crossed stop line during RED signal",
                     "severity": "CRITICAL",
+                    "plate_number": plate_number,
+                    "plate_bbox": plate_bbox,
+                    "plate_confidence": plate_confidence,
+                    "plate_visible": plate_visible,
                 })
             # Check Triple Riding
             if vid in tr_result:
@@ -112,6 +132,10 @@ class Pipeline:
                     "type": "Triple Riding",
                     "details": f"{cnt} riders detected on {cls_name} (Max allowed: 2)",
                     "severity": "HIGH",
+                    "plate_number": plate_number,
+                    "plate_bbox": plate_bbox,
+                    "plate_confidence": plate_confidence,
+                    "plate_visible": plate_visible,
                 })
             # Check Helmet Violation
             if vid in hv_result:
@@ -123,6 +147,10 @@ class Pipeline:
                     "type": "No Helmet Violation",
                     "details": f"Rider without helmet on {cls_name}",
                     "severity": "HIGH",
+                    "plate_number": plate_number,
+                    "plate_bbox": plate_bbox,
+                    "plate_confidence": plate_confidence,
+                    "plate_visible": plate_visible,
                 })
             # Check Wrong Way
             if vid in ww_result:
@@ -134,6 +162,10 @@ class Pipeline:
                     "type": "Wrong Way",
                     "details": f"{cls_name} moving opposite to allowed traffic flow",
                     "severity": "MEDIUM",
+                    "plate_number": plate_number,
+                    "plate_bbox": plate_bbox,
+                    "plate_confidence": plate_confidence,
+                    "plate_visible": plate_visible,
                 })
 
         self.latest_events = new_events
@@ -141,8 +173,8 @@ class Pipeline:
         # Draw annotations
         img_new = self.annotator.vehicle_detection(img, vd_result)
         img_new = self.annotator.running_red_light(img_new, vd_result, rrl_result, self.rrl.state)
-        img_new = self.annotator.helmet_violation(img_new, vd_result, hv_result)
-        img_new = self.annotator.triple_riding(img_new, vd_result, tr_result, getattr(self.hv, "rider_counts", {}))
+        img_new = self.annotator.helmet_violation(img_new, vd_result, hv_result, plate_dict=self.latest_plates)
+        img_new = self.annotator.triple_riding(img_new, vd_result, tr_result, rider_counts=getattr(self.hv, "rider_counts", {}), plate_dict=self.latest_plates)
         img_new = self.annotator.wrongway_detection(img_new, vd_result, direction, ww_result)
         
         return img_new

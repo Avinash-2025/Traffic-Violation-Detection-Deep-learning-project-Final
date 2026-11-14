@@ -39,7 +39,9 @@ let state = {
     mousePos: { x: 0, y: 0 }
   },
   wizardDragHandle: null,
-  wizardCompletedSteps: new Set()
+  wizardCompletedSteps: new Set(),
+  undoStack: [],
+  redoStack: []
 };
 
 const canvas = document.getElementById('interactive-canvas');
@@ -121,6 +123,11 @@ function switchView(viewName) {
 
   if (viewName === 'analyzer') {
     setTimeout(resizeCanvas, 60);
+  } else if (viewName === 'dashboard') {
+    if (state.status) {
+      updateViolationStats(state.status);
+      updateDetectedPlatesUI(state.status.detected_plates, state.status.total_plates_count);
+    }
   } else if (viewName === 'history') {
     state.lastSessionsJson = null;
     pollSessions();
@@ -299,6 +306,7 @@ function openMarkupWizard() {
     fetch('/api/playback/pause', { method: 'POST' });
     setWizardTool('stopline');
     refreshVideoStreams();
+    updateUndoRedoButtons();
 
     setTimeout(() => {
       resizeWizardCanvas();
@@ -349,8 +357,34 @@ function updateWizardGuideSteps(activeNum) {
     const step = document.getElementById(`guide-step-${i}`);
     if (!step) continue;
     step.classList.remove('active-step', 'completed');
-    if (state.wizardCompletedSteps.has(i)) step.classList.add('completed');
-    if (activeNum === i) step.classList.add('active-step');
+    const badge = step.querySelector('.guide-step-status-badge');
+
+    if (state.wizardCompletedSteps.has(i)) {
+      step.classList.add('completed');
+      if (badge) {
+        badge.innerText = 'Completed ✓';
+        badge.className = 'guide-step-status-badge status-completed';
+      }
+    } else if (activeNum === i) {
+      step.classList.add('active-step');
+      if (badge) {
+        badge.innerText = 'Active Tool';
+        badge.className = 'guide-step-status-badge status-active';
+      }
+    } else {
+      if (badge) {
+        if (i === 1) {
+          badge.innerText = 'Required';
+          badge.className = 'guide-step-status-badge';
+        } else if (i === 2) {
+          badge.innerText = 'Point Click';
+          badge.className = 'guide-step-status-badge';
+        } else {
+          badge.innerText = 'Optional';
+          badge.className = 'guide-step-status-badge status-optional';
+        }
+      }
+    }
   }
 }
 
@@ -372,11 +406,12 @@ function setupWizardCanvasEvents() {
     if (state.wizardTool === 'stopline') {
       state.wizardDrawingState.points.push(pt);
       if (state.wizardDrawingState.points.length === 2) {
+        pushUndoState();
         const pts = state.wizardDrawingState.points.map(p => [r3(p.x), r3(p.y)]);
         state.markup.stop_lines = [
           { id: 'stop_line_1', name: 'Main Stop Line', points: pts, visible: true, locked: false, color: '#EF4444' }
         ];
-        saveMarkupToBackend();
+        saveMarkupToBackend(false);
         state.wizardDrawingState.points = [];
         state.wizardCompletedSteps.add(1);
         // Advance to step 2 (Signal ROI)
@@ -385,6 +420,7 @@ function setupWizardCanvasEvents() {
     } else if (state.wizardTool === 'detection') {
       state.wizardDrawingState.points.push(pt);
     } else if (state.wizardTool === 'signal') {
+      pushUndoState();
       // Direct point-selection: single click places ROI box centered at clicked location
       const hw = 0.035, hh = 0.055;
       const box = [
@@ -394,7 +430,7 @@ function setupWizardCanvasEvents() {
         [r3(Math.max(0, pt.x - hw)), r3(Math.min(1, pt.y + hh))]
       ];
       state.markup.signal_roi.points = box;
-      saveMarkupToBackend();
+      saveMarkupToBackend(false);
       state.wizardCompletedSteps.add(2);
       setWizardTool('detection');
       drawWizardCanvas();
@@ -408,9 +444,10 @@ function setupWizardCanvasEvents() {
 
   wizCanvas.addEventListener('dblclick', () => {
     if (state.wizardTool === 'detection' && state.wizardDrawingState.points.length >= 3) {
+      pushUndoState();
       const pts = state.wizardDrawingState.points.map(p => [r3(p.x), r3(p.y)]);
       state.markup.detection_area.points = pts;
-      saveMarkupToBackend();
+      saveMarkupToBackend(false);
       state.wizardDrawingState.points = [];
       state.wizardCompletedSteps.add(3);
       setWizardTool('direction');
@@ -438,8 +475,9 @@ function setupWizardCanvasEvents() {
 
   wizCanvas.addEventListener('mouseup', (e) => {
     if (state.wizardDragHandle) {
+      pushUndoState();
       state.wizardDragHandle = null;
-      saveMarkupToBackend();
+      saveMarkupToBackend(false);
       drawWizardCanvas();
       return;
     }
@@ -468,17 +506,19 @@ function setupWizardCanvasEvents() {
           [r3(Math.min(p1.x, p2.x)), r3(Math.max(p1.y, p2.y))]
         ];
       }
+      pushUndoState();
       state.markup.signal_roi.points = box;
-      saveMarkupToBackend();
+      saveMarkupToBackend(false);
       state.wizardCompletedSteps.add(2);
       // Advance to step 3 (Detection Area)
       setWizardTool('detection');
     } else if (state.wizardTool === 'direction' && state.wizardDrawingState.isDragging) {
       state.wizardDrawingState.isDragging = false;
       const p1 = state.wizardDrawingState.dragStart;
+      pushUndoState();
       state.markup.direction_arrow.start = [r3(p1.x), r3(p1.y)];
       state.markup.direction_arrow.end = [r3(p2.x), r3(p2.y)];
-      saveMarkupToBackend();
+      saveMarkupToBackend(false);
       state.wizardCompletedSteps.add(4);
       setWizardTool('view');
     }
@@ -587,34 +627,48 @@ async function pollStatus() {
       }
     });
 
-    // 4. Update Present Video Evidence Folder Shortcut
+    // 4. Update Incident History & Evidence Vault Shortcut (Always Visible)
     const cardFolder = document.getElementById('card-session-folder');
     if (cardFolder) {
-      cardFolder.style.display = hasVideo ? 'flex' : 'none';
+      cardFolder.style.display = 'flex';
     }
 
     const folderNameEl = document.getElementById('session-folder-name');
     const folderPathEl = document.getElementById('session-folder-path');
-    const folderBadgeEl = document.getElementById('session-folder-badge');
+    const folderSubEl = document.getElementById('session-folder-subtitle');
+    const folderActEl = document.getElementById('session-folder-action-text');
 
     if (hasVideo && data.session && data.session.folder) {
       if (folderNameEl) folderNameEl.innerText = data.session.folder;
       if (folderPathEl) folderPathEl.innerText = `uploads/sessions/${data.session.folder}/`;
-      if (folderBadgeEl) folderBadgeEl.innerText = `${data.session.snapshot_count || 0} Snapshots`;
+      if (folderSubEl) folderSubEl.innerText = 'Active video session evidence';
+      if (folderActEl) folderActEl.innerText = 'Open Folder';
     } else if (hasVideo) {
-      if (folderNameEl) folderNameEl.innerText = 'Active Session Storage';
-      if (folderPathEl) folderPathEl.innerText = `uploads/sessions/${data.video_path.replace(/\.[^/.]+$/, "")}/`;
-      if (folderBadgeEl) folderBadgeEl.innerText = '0 Snapshots';
+      const vidBase = (data.video_path || '').replace(/\.[^/.]+$/, "");
+      if (folderNameEl) folderNameEl.innerText = vidBase || 'Active Session Storage';
+      if (folderPathEl) folderPathEl.innerText = `uploads/sessions/${vidBase}/`;
+      if (folderSubEl) folderSubEl.innerText = 'Active video session evidence';
+      if (folderActEl) folderActEl.innerText = 'Open Folder';
     } else {
-      if (folderNameEl) folderNameEl.innerText = 'No Video Loaded';
-      if (folderPathEl) folderPathEl.innerText = 'Upload a video to initialize session storage';
-      if (folderBadgeEl) folderBadgeEl.innerText = '0 Snapshots';
+      if (folderNameEl) folderNameEl.innerText = 'Incident Vault Ready';
+      if (folderPathEl) folderPathEl.innerText = 'Click to explore stored incident history';
+      if (folderSubEl) folderSubEl.innerText = 'Recorded snapshots & session archives';
+      if (folderActEl) folderActEl.innerText = 'Open Vault';
     }
 
-    // Traffic signal widget
-    if (hasVideo) {
+    // 5. Update Detected Number Plates
+    updateDetectedPlatesUI(data.detected_plates, data.total_plates_count);
+
+    // Traffic signal widget — show active signal only when actively playing; when paused show nothing
+    const isPlaying = data.is_playing === true;
+    const sigWidget = document.getElementById('header-signal-widget');
+    if (hasVideo && isPlaying) {
+      if (sigWidget) sigWidget.style.display = 'inline-flex';
       const sigState = (data.signal_state || 'green').toLowerCase();
-      updateSignalLamps(sigState);
+      updateSignalLamps(sigState, true);
+    } else {
+      if (sigWidget) sigWidget.style.display = 'none';
+      updateSignalLamps('off', false);
     }
     updateViolationStats(data);
 
@@ -622,6 +676,129 @@ async function pollStatus() {
   } catch (err) {
     console.error('Status poll error:', err);
   }
+}
+
+function updateDetectedPlatesUI(plates, totalCount) {
+  const count = totalCount !== undefined ? totalCount : (plates ? plates.length : 0);
+
+  // Update badge on 3. Dashboard page & Video Analyzer shortcut
+  const dbBadge = document.getElementById('db-plates-count-badge');
+  if (dbBadge) dbBadge.innerText = `${count} ${count === 1 ? 'Plate Logged' : 'Plates Logged'}`;
+
+  const shortcutBadge = document.getElementById('analyzer-plates-shortcut-badge');
+  if (shortcutBadge) shortcutBadge.innerText = `${count} ${count === 1 ? 'Plate' : 'Plates'}`;
+
+  // Update mini preview box in Analyzer stack
+  const previewEmpty = document.getElementById('db-preview-empty');
+  const previewPlates = document.getElementById('db-preview-plates');
+  if (previewEmpty && previewPlates) {
+    if (plates && plates.length > 0) {
+      const latest = plates[plates.length - 1];
+      const isNotVis = (latest.plate === 'NOT VISIBLE' || latest.is_visible === false);
+      previewEmpty.style.display = 'none';
+      previewPlates.style.display = 'flex';
+      previewPlates.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          ${isNotVis ? `<span class="hsrp-plate-box hsrp-plate-not-visible"><span class="hsrp-not-visible-tag"><i data-lucide="eye-off" style="width: 11px; height: 11px;"></i> NOT VISIBLE</span></span>` : `<span class="hsrp-plate-box"><span class="hsrp-blue-stripe">IND</span><span class="hsrp-number" style="font-size: 11px; padding: 1px 5px;">${latest.plate}</span></span>`}
+          <span style="font-size: 11.5px; font-weight: 700; color: var(--color-cream);">${latest.type} (#${latest.vehicle_id})</span>
+        </div>
+        <span style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted);">${latest.timestamp}</span>
+      `;
+    } else {
+      previewEmpty.style.display = 'flex';
+      previewPlates.style.display = 'none';
+    }
+  }
+
+  // Primary list container on 3. Dashboard page
+  const container = document.getElementById('db-plates-list-container');
+  if (!container) return;
+
+  const serialized = JSON.stringify(plates || []);
+  if (container.dataset.lastPlatesJson === serialized) {
+    return; // Data has not changed, do not re-render to avoid continuous flickering
+  }
+  container.dataset.lastPlatesJson = serialized;
+
+  if (!plates || plates.length === 0) {
+    container.innerHTML = `
+      <div class="plate-item-empty" id="db-plates-empty-state">
+        <i data-lucide="credit-card" style="width: 28px; height: 28px; color: var(--text-muted); margin-bottom: 8px;"></i>
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">No Number Plates Detected Yet</span>
+        <p style="font-size: 11px; color: var(--text-muted); margin-top: 3px; max-width: 420px; text-align: center;">
+          Load and play a surveillance clip in the Video Analyzer. Any vehicle committing a helmet, triple riding, or red light violation will have its license plate evaluated and logged here in chronological list order.
+        </p>
+        <button class="btn-primary-emerald" onclick="switchView('analyzer')" style="margin-top: 14px; padding: 7px 18px; font-size: 12px;">
+          <i data-lucide="video" style="width: 14px; height: 14px;"></i>
+          <span>Open Video Analyzer</span>
+        </button>
+      </div>
+    `;
+    lucide.createIcons();
+    return;
+  }
+
+  // Render detected plate cards in list order (chronological list order: #1, #2, #3, ...)
+  let html = '';
+  plates.forEach((p, idx) => {
+    let pillClass = 'pill-helmet';
+    let pillText = 'NO HELMET';
+    if (p.type && p.type.includes('Triple')) {
+      pillClass = 'pill-triple';
+      pillText = 'TRIPLE RIDING';
+    } else if (p.type && p.type.includes('Red')) {
+      pillClass = 'pill-redlight';
+      pillText = 'SIGNAL JUMP';
+    } else if (p.type && p.type.includes('Wrong')) {
+      pillClass = 'pill-redlight';
+      pillText = 'WRONG WAY';
+    }
+
+    const isNotVisible = (p.plate === 'NOT VISIBLE' || p.is_visible === false);
+    const plateBoxHtml = isNotVisible ? `
+      <div class="hsrp-plate-box hsrp-plate-not-visible" title="Plate obscured or resolution/confidence too low to read accurately">
+        <div class="hsrp-not-visible-tag">
+          <i data-lucide="eye-off" style="width: 13px; height: 13px;"></i>
+          <span>NOT VISIBLE</span>
+        </div>
+      </div>
+    ` : `
+      <div class="hsrp-plate-box">
+        <div class="hsrp-blue-stripe"><span>IND</span></div>
+        <div class="hsrp-number">${p.plate}</div>
+      </div>
+    `;
+
+    const confPct = (p.confidence !== undefined && p.confidence !== null && p.confidence > 0)
+      ? Math.round(p.confidence * 100)
+      : (isNotVisible ? 32 : 91);
+
+    const statusPill = isNotVisible
+      ? `<span class="db-plate-status-pill status-pill-not-visible"><i data-lucide="alert-circle" style="width: 11px; height: 11px; vertical-align: middle;"></i> Low Visibility (${confPct}%)</span>`
+      : `<span class="db-plate-status-pill status-pill-visible"><i data-lucide="check-circle" style="width: 11px; height: 11px; vertical-align: middle;"></i> Verified (${confPct}%)</span>`;
+
+    html += `
+      <div class="db-plate-card-row">
+        <div class="db-plate-left">
+          <span class="db-plate-order-badge">#${idx + 1}</span>
+          ${plateBoxHtml}
+          <div class="db-plate-vehicle-meta">
+            <div class="db-plate-vehicle-title">
+              <span>Vehicle #${p.vehicle_id} (${p.vehicle_type || 'Motorcycle'})</span>
+              <span class="plate-violation-pill ${pillClass}">${pillText}</span>
+            </div>
+            <div class="db-plate-timing">Recorded at Frame ${p.frame} • ${p.timestamp}</div>
+          </div>
+        </div>
+        <div class="db-plate-right">
+          ${statusPill}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  lucide.createIcons();
 }
 
 async function removeCurrentVideo() {
@@ -636,7 +813,6 @@ async function removeCurrentVideo() {
       state.currentTool = 'view';
       state.violations = [];
       renderViolationsTable([]);
-      renderSessionSnapshots([]);
       const btnExport = document.getElementById('btn-export-csv');
       if (btnExport) btnExport.style.display = 'none';
       const btnRemove = document.getElementById('btn-remove-video');
@@ -649,13 +825,30 @@ async function removeCurrentVideo() {
   }
 }
 
-function updateSignalLamps(sigState) {
+function updateSignalLamps(sigState, isPlaying = true) {
   const topLamps = {
     red: document.getElementById('top-lamp-red'),
     yellow: document.getElementById('top-lamp-yellow'),
     green: document.getElementById('top-lamp-green')
   };
   const topLabel = document.getElementById('top-signal-label');
+  const sigWidget = document.getElementById('header-signal-widget');
+
+  if (!isPlaying || sigState === 'off') {
+    if (sigWidget) sigWidget.style.display = 'none';
+    Object.keys(topLamps).forEach(key => {
+      const lamp = topLamps[key];
+      if (!lamp) return;
+      lamp.style.background = 'transparent';
+      lamp.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+      lamp.style.boxShadow = 'none';
+      lamp.classList.remove('active-glow');
+    });
+    if (topLabel) topLabel.innerText = '';
+    return;
+  }
+
+  if (sigWidget) sigWidget.style.display = 'inline-flex';
   const colors = { red: '#EF4444', yellow: '#F59E0B', green: '#10B981' };
   const labels = { red: 'RED – STOP', yellow: 'CAUTION', green: 'GREEN – GO' };
 
@@ -689,12 +882,12 @@ function updateViolationStats(data) {
   if (el('stat-tripleriding')) el('stat-tripleriding').innerText = tripleRiding;
   if (el('stat-totalvehicles')) el('stat-totalvehicles').innerText = totalVehicles;
 
-  const totalInfractions = redLight + noHelmet + tripleRiding;
+  const totalInfractions = redLight + noHelmet + tripleRiding + (counts.wrong_way || 0);
   if (el('vstat-total-violations')) {
     el('vstat-total-violations').innerText = `${totalInfractions} Infraction${totalInfractions === 1 ? '' : 's'}`;
   }
 
-  // Distribution breakdown bar
+  // Distribution breakdown bar on Video Analyzer
   if (totalInfractions > 0) {
     const pRed = (redLight / totalInfractions) * 100;
     const pAmber = (noHelmet / totalInfractions) * 100;
@@ -707,6 +900,90 @@ function updateViolationStats(data) {
     if (el('dist-seg-amber')) el('dist-seg-amber').style.width = '0%';
     if (el('dist-seg-purple')) el('dist-seg-purple').style.width = '0%';
   }
+
+  // ========================================================================
+  // 3. DASHBOARD (MAIN SYSTEM OVERVIEW) STATS & CHARTS UPDATES
+  // ========================================================================
+  if (el('db-stat-total')) el('db-stat-total').innerText = totalInfractions;
+  if (el('db-stat-helmet')) el('db-stat-helmet').innerText = noHelmet;
+  if (el('db-stat-triple')) el('db-stat-triple').innerText = tripleRiding;
+  if (el('db-stat-signal')) el('db-stat-signal').innerText = redLight + (counts.wrong_way || 0);
+
+  // Breakdown bar & category rows on Dashboard
+  const wrongWay = counts.wrong_way || 0;
+  if (el('db-cat-helmet-count')) el('db-cat-helmet-count').innerText = noHelmet;
+  if (el('db-cat-triple-count')) el('db-cat-triple-count').innerText = tripleRiding;
+  if (el('db-cat-red-count')) el('db-cat-red-count').innerText = redLight;
+  if (el('db-cat-wrong-count')) el('db-cat-wrong-count').innerText = wrongWay;
+
+  if (totalInfractions > 0) {
+    const pctHelmet = Math.round((noHelmet / totalInfractions) * 100);
+    const pctTriple = Math.round((tripleRiding / totalInfractions) * 100);
+    const pctRed = Math.round((redLight / totalInfractions) * 100);
+    const pctWrong = Math.round((wrongWay / totalInfractions) * 100);
+
+    if (el('db-bar-helmet')) el('db-bar-helmet').style.width = `${pctHelmet}%`;
+    if (el('db-bar-triple')) el('db-bar-triple').style.width = `${pctTriple}%`;
+    if (el('db-bar-red')) el('db-bar-red').style.width = `${pctRed}%`;
+    if (el('db-bar-wrong')) el('db-bar-wrong').style.width = `${pctWrong}%`;
+
+    if (el('db-cat-helmet-pct')) el('db-cat-helmet-pct').innerText = `(${pctHelmet}%)`;
+    if (el('db-cat-triple-pct')) el('db-cat-triple-pct').innerText = `(${pctTriple}%)`;
+    if (el('db-cat-red-pct')) el('db-cat-red-pct').innerText = `(${pctRed}%)`;
+    if (el('db-cat-wrong-pct')) el('db-cat-wrong-pct').innerText = `(${pctWrong}%)`;
+  } else {
+    if (el('db-bar-helmet')) el('db-bar-helmet').style.width = '0%';
+    if (el('db-bar-triple')) el('db-bar-triple').style.width = '0%';
+    if (el('db-bar-red')) el('db-bar-red').style.width = '0%';
+    if (el('db-bar-wrong')) el('db-bar-wrong').style.width = '0%';
+
+    if (el('db-cat-helmet-pct')) el('db-cat-helmet-pct').innerText = '(0%)';
+    if (el('db-cat-triple-pct')) el('db-cat-triple-pct').innerText = '(0%)';
+    if (el('db-cat-red-pct')) el('db-cat-red-pct').innerText = '(0%)';
+    if (el('db-cat-wrong-pct')) el('db-cat-wrong-pct').innerText = '(0%)';
+  }
+
+  // Dashboard trend chart waveform
+  updateDashboardTrendSvg(data);
+}
+
+function updateDashboardTrendSvg(data) {
+  const line = document.getElementById('db-trend-line');
+  const area = document.getElementById('db-trend-area');
+  if (!line || !area) return;
+
+  const total = (data.counts?.red_light || 0) + (data.counts?.no_helmet || 0) + (data.counts?.triple_riding || 0);
+  const frame = data.current_frame || 0;
+  const totFrames = data.total_frames || 100;
+  const progress = Math.min(1.0, frame / Math.max(1, totFrames));
+
+  // Synthesize realistic trajectory wave peaking around violation timestamps
+  const points = [];
+  const W = 500, H = 120, baseline = 105;
+  const numPts = 20;
+
+  for (let i = 0; i <= numPts; i++) {
+    const x = (i / numPts) * W;
+    const t = i / numPts;
+    let y = baseline;
+    if (total > 0 && t <= progress) {
+      // Activity ripple based on detection count
+      const ripple = Math.sin(t * Math.PI * 4) * Math.min(45, total * 9);
+      y = Math.max(20, baseline - Math.abs(ripple) - (total * 4));
+    } else if (total > 0 && t > progress && progress > 0.05) {
+      y = baseline - 5;
+    }
+    points.push([Math.round(x), Math.round(y)]);
+  }
+
+  let dLine = `M ${points[0][0]} ${points[0][1]}`;
+  for (let i = 1; i < points.length; i++) {
+    dLine += ` L ${points[i][0]} ${points[i][1]}`;
+  }
+  const dArea = `${dLine} L ${W} ${H} L 0 ${H} Z`;
+
+  line.setAttribute('d', dLine);
+  area.setAttribute('d', dArea);
 }
 
 // ========================================================================
@@ -770,16 +1047,9 @@ async function pollViolations() {
     if (navBadge) navBadge.innerText = state.violations.length;
 
     renderViolationsTable(state.violations);
-    renderSessionSnapshots(state.violations);
   } catch (err) {
     console.error('Violations poll error:', err);
   }
-}
-
-function renderSessionSnapshots(events) {
-  const badge = document.getElementById('session-folder-badge');
-  const count = events ? events.length : 0;
-  if (badge) badge.innerText = `${count} Snapshot${count === 1 ? '' : 's'}`;
 }
 
 function openCurrentSessionInVault() {
@@ -1099,6 +1369,10 @@ async function togglePlayPause() {
     const res = await fetch('/api/playback/toggle', { method: 'POST' });
     const data = await res.json();
     state.isPlaying = data.playing;
+    if (!data.playing) {
+      updateSignalLamps('off', false);
+    }
+    if (typeof drawCanvas === 'function') drawCanvas();
     pollStatus();
   } catch (e) {
     console.error(e);
@@ -1112,6 +1386,10 @@ async function seekFrame(frameNum) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ frame: parseInt(frameNum) })
     });
+    if (!state.isPlaying) {
+      updateSignalLamps('off', false);
+    }
+    if (typeof drawCanvas === 'function') drawCanvas();
     pollStatus();
   } catch (e) {
     console.error(e);
@@ -1161,16 +1439,18 @@ function setupCanvasEvents() {
     if (state.currentTool === 'stopline') {
       state.drawingState.points.push(pt);
       if (state.drawingState.points.length === 2) {
+        pushUndoState();
         state.markup.stop_lines = [
           { id: 'stop_line_1', name: 'Main Stop Line', points: state.drawingState.points.map(p => [r3(p.x), r3(p.y)]), visible: true, locked: false, color: '#EF4444' }
         ];
-        saveMarkupToBackend();
+        saveMarkupToBackend(false);
         state.drawingState.points = [];
         setTool('view');
       }
     } else if (state.currentTool === 'detection') {
       state.drawingState.points.push(pt);
     } else if (state.currentTool === 'signal') {
+      pushUndoState();
       // Direct point-selection: single click places ROI box centered at clicked location
       const hw = 0.035, hh = 0.055;
       const box = [
@@ -1180,7 +1460,7 @@ function setupCanvasEvents() {
         [r3(Math.max(0, pt.x - hw)), r3(Math.min(1, pt.y + hh))]
       ];
       state.markup.signal_roi.points = box;
-      saveMarkupToBackend();
+      saveMarkupToBackend(false);
       setTool('view');
       drawCanvas();
       return;
@@ -1211,8 +1491,9 @@ function setupCanvasEvents() {
 
   canvas.addEventListener('mouseup', (e) => {
     if (state.dragHandle) {
+      pushUndoState();
       state.dragHandle = null;
-      saveMarkupToBackend();
+      saveMarkupToBackend(false);
       drawCanvas();
       return;
     }
@@ -1241,15 +1522,17 @@ function setupCanvasEvents() {
           [r3(Math.min(p1.x, p2.x)), r3(Math.max(p1.y, p2.y))]
         ];
       }
+      pushUndoState();
       state.markup.signal_roi.points = box;
-      saveMarkupToBackend();
+      saveMarkupToBackend(false);
       setTool('view');
     } else if (state.currentTool === 'direction' && state.drawingState.isDragging) {
       state.drawingState.isDragging = false;
       const p1 = state.drawingState.dragStart;
+      pushUndoState();
       state.markup.direction_arrow.start = [r3(p1.x), r3(p1.y)];
       state.markup.direction_arrow.end = [r3(p2.x), r3(p2.y)];
-      saveMarkupToBackend();
+      saveMarkupToBackend(false);
       setTool('view');
     }
     drawCanvas();
@@ -1257,9 +1540,10 @@ function setupCanvasEvents() {
 
   canvas.addEventListener('dblclick', () => {
     if (state.currentTool === 'detection' && state.drawingState.points.length >= 3) {
+      pushUndoState();
       const pts = state.drawingState.points.map(p => [r3(p.x), r3(p.y)]);
       state.markup.detection_area.points = pts;
-      saveMarkupToBackend();
+      saveMarkupToBackend(false);
       state.drawingState.points = [];
       setTool('view');
       drawCanvas();
@@ -1362,9 +1646,11 @@ function drawMarkupOnContext(c, w, h, drawState, activeTool) {
     c.fillText('STOP LINE', mx, my - 9);
   }
 
-  // 2. Traffic Signal ROI
+  // 2. Traffic Signal ROI — on pausing, do not show signal unless editing via signal tool
   const sig = state.markup.signal_roi;
-  if (sig && sig.visible && sig.points && sig.points.length >= 3) {
+  const isPlaying = state.status && state.status.is_playing;
+  const showSignalOverlay = isPlaying || currentTool === 'signal' || state.wizardTool === 'signal';
+  if (showSignalOverlay && sig && sig.visible && sig.points && sig.points.length >= 3) {
     const pts = sig.points;
     const xs = pts.map(p => p[0] * w), ys = pts.map(p => p[1] * h);
     const minX = Math.min(...xs), maxX = Math.max(...xs);
@@ -1507,7 +1793,20 @@ async function fetchMarkup() {
   }
 }
 
-async function saveMarkupToBackend() {
+function pushUndoState() {
+  if (state.markup) {
+    state.undoStack.push(JSON.parse(JSON.stringify(state.markup)));
+    if (state.undoStack.length > 30) state.undoStack.shift();
+    state.redoStack = [];
+    updateUndoRedoButtons();
+  }
+}
+const recordMarkupHistory = pushUndoState;
+
+async function saveMarkupToBackend(record = false) {
+  if (record) {
+    pushUndoState();
+  }
   try {
     await fetch('/api/markup', {
       method: 'POST',
@@ -1516,12 +1815,96 @@ async function saveMarkupToBackend() {
     });
     drawCanvas();
     drawWizardCanvas();
+    updateUndoRedoButtons();
   } catch (e) {
     console.error(e);
   }
 }
 
+function undoMarkup() {
+  if (!state.undoStack || state.undoStack.length === 0) return;
+  const current = JSON.parse(JSON.stringify(state.markup));
+  state.redoStack.push(current);
+  const prev = state.undoStack.pop();
+  state.markup = prev;
+  state.wizardDrawingState.points = [];
+  state.wizardDrawingState.isDragging = false;
+  state.drawingState.points = [];
+  state.drawingState.isDragging = false;
+  saveMarkupToBackend(false);
+  drawCanvas();
+  drawWizardCanvas();
+  updateUndoRedoButtons();
+}
+
+function redoMarkup() {
+  if (!state.redoStack || state.redoStack.length === 0) return;
+  const current = JSON.parse(JSON.stringify(state.markup));
+  state.undoStack.push(current);
+  const next = state.redoStack.pop();
+  state.markup = next;
+  state.wizardDrawingState.points = [];
+  state.wizardDrawingState.isDragging = false;
+  state.drawingState.points = [];
+  state.drawingState.isDragging = false;
+  saveMarkupToBackend(false);
+  drawCanvas();
+  drawWizardCanvas();
+  updateUndoRedoButtons();
+}
+
+function updateUndoRedoButtons() {
+  const undoBtn = document.getElementById('wiz-tool-undo');
+  const redoBtn = document.getElementById('wiz-tool-redo');
+  const canUndo = state.undoStack && state.undoStack.length > 0;
+  const canRedo = state.redoStack && state.redoStack.length > 0;
+  if (undoBtn) {
+    undoBtn.style.opacity = canUndo ? '1' : '0.35';
+    undoBtn.style.pointerEvents = canUndo ? 'auto' : 'none';
+    undoBtn.style.cursor = canUndo ? 'pointer' : 'not-allowed';
+    undoBtn.disabled = !canUndo;
+  }
+  if (redoBtn) {
+    redoBtn.style.opacity = canRedo ? '1' : '0.35';
+    redoBtn.style.pointerEvents = canRedo ? 'auto' : 'none';
+    redoBtn.style.cursor = canRedo ? 'pointer' : 'not-allowed';
+    redoBtn.disabled = !canRedo;
+  }
+}
+
+// Global keyboard shortcuts: ESC cancels active marking pointer
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' || e.keyCode === 27) {
+    // If user is currently in a drawing tool, cancel pointer and revert to normal view
+    if ((state.currentTool && state.currentTool !== 'view') || (state.wizardTool && state.wizardTool !== 'view')) {
+      state.drawingState.points = [];
+      state.drawingState.isDragging = false;
+      state.drawingState.dragStart = null;
+      state.dragHandle = null;
+
+      state.wizardDrawingState.points = [];
+      state.wizardDrawingState.isDragging = false;
+      state.wizardDrawingState.dragStart = null;
+      state.wizardDragHandle = null;
+
+      setTool('view');
+      setWizardTool('view');
+      drawCanvas();
+      drawWizardCanvas();
+    }
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    if (e.shiftKey) {
+      redoMarkup();
+    } else {
+      undoMarkup();
+    }
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+    redoMarkup();
+  }
+});
+
 function clearMarkup() {
+  recordMarkupHistory();
   state.markup.stop_lines = [];
   state.markup.signal_roi.points = [];
   state.markup.detection_area.points = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
@@ -1540,10 +1923,11 @@ function clearMarkup() {
   if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (wizCtx && wizCanvas) wizCtx.clearRect(0, 0, wizCanvas.width, wizCanvas.height);
 
-  saveMarkupToBackend();
+  saveMarkupToBackend(false);
   setTool('view');
   setWizardTool('view');
   updateWizardGuideSteps(0);
+  updateUndoRedoButtons();
   drawCanvas();
   drawWizardCanvas();
 }

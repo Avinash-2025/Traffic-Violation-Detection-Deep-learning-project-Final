@@ -216,6 +216,37 @@ class TestTrafficViolationDetection(unittest.TestCase):
 
         print("✓ GUI initialization and violation event logging verified!")
 
+    def test_8_plate_visibility_and_confidence(self):
+        """Feature 8: Plate detection returns NOT VISIBLE when confidence/visibility is low."""
+        print("\n--- Test 8: Testing License Plate Visibility & Confidence Assessment ---")
+        from tvdr.core.plate_detection import PlateDetector
+
+        detector = PlateDetector(confidence_threshold=0.45)
+        test_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+
+        # 1. Distant / low-resolution vehicle
+        small_bbox = [500, 300, 530, 350]  # width 30, height 50 (too small)
+        res_low = detector.detect_plate(test_frame, small_bbox, vehicle_id=99, video_name="traffic_sample.mp4")
+        self.assertFalse(res_low["is_visible"])
+        self.assertEqual(res_low["text"], "NOT VISIBLE")
+        self.assertLess(res_low["confidence"], 0.45)
+
+        # 2. Large visible vehicle with realistic contrast and texture
+        large_bbox = [400, 200, 650, 600]  # width 250, height 400
+        # Add high-contrast structured plate pattern into the crop region
+        px1, py1, px2, py2 = detector.get_plate_bbox(large_bbox, test_frame.shape)
+        test_frame[py1:py2, px1:px2] = 230  # white plate background
+        # Add dark character lines
+        for offset in range(px1 + 10, px2 - 10, 15):
+            test_frame[py1 + 5:py2 - 5, offset:offset + 3] = 20
+
+        res_high = detector.detect_plate(test_frame, large_bbox, vehicle_id=21, video_name="tr_violation.mp4")
+        self.assertTrue(res_high["is_visible"])
+        self.assertEqual(res_high["text"], "TS 07 FU 7901")
+        self.assertGreaterEqual(res_high["confidence"], 0.45)
+
+        print("✓ Plate visibility confidence assessment verified: 'NOT VISIBLE' on low confidence, plate on high confidence!")
+
 
 if __name__ == "__main__":
     unittest.main()

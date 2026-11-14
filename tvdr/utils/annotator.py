@@ -71,38 +71,93 @@ class Annotator:
             )
         return img_new
 
-    def helmet_violation(self, img, preds, violation_list):
+    def helmet_violation(self, img, preds, violation_list, plate_dict=None):
         img_new = img.copy()
         if violation_list is None or len(violation_list) == 0:
             return img_new
+        v_set = set(int(v) for v in violation_list)
         for obj in preds:
-            if obj[6] in violation_list:
-                # add helmet violation box
-                img_new = self.put_no_helmet(img_new, obj)
+            vid = int(obj[6])
+            if vid in v_set:
+                bbox = obj[0:4]
+                bx1, by1, bx2, by2 = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
+                # 1. Full prominent square red bounding box around the vehicle
+                cv2.rectangle(img_new, (bx1, by1), (bx2, by2), (0, 0, 255), 3)
+                # 2. Add NO HELMET badge on top of bbox
+                text_bbox = "NO HELMET"
+                text_size, _ = cv2.getTextSize(
+                    text_bbox, self.hv_text_font, self.hv_text_fontscale, self.hv_text_thickness
+                )
+                text_w, text_h = text_size
+                cv2.rectangle(
+                    img_new,
+                    pt1=(bx1, max(0, by1 - text_h - 6)),
+                    pt2=(bx1 + text_w + 8, by1),
+                    color=(0, 0, 220),
+                    thickness=cv2.FILLED,
+                )
+                cv2.putText(
+                    img_new,
+                    text_bbox,
+                    org=(bx1 + 4, max(text_h, by1 - 4)),
+                    fontFace=self.hv_text_font,
+                    fontScale=self.hv_text_fontscale,
+                    color=(255, 255, 255),
+                    thickness=self.hv_text_thickness,
+                    lineType=cv2.LINE_AA,
+                )
+                # 3. Add detected license plate box at bottom
+                pinfo = None
+                if plate_dict:
+                    pinfo = plate_dict.get(vid) or plate_dict.get(obj[6])
+                if pinfo:
+                    pbox = pinfo["bbox"]
+                    is_vis = pinfo.get("is_visible", True) and pinfo.get("text") != "NOT VISIBLE"
+                    ptext = f"PLATE: {pinfo['text']}" if is_vis else "PLATE: NOT VISIBLE"
+                    box_color = (255, 200, 0) if is_vis else (120, 120, 120)
+                    cv2.rectangle(img_new, (int(pbox[0]), int(pbox[1])), (int(pbox[2]), int(pbox[3])), box_color, 2)
+                    pt_size, _ = cv2.getTextSize(ptext, self.text_font, 0.42, 1)
+                    px1, py1 = int(pbox[0]), int(pbox[1])
+                    cv2.rectangle(
+                        img_new,
+                        pt1=(px1, max(0, py1 - pt_size[1] - 4)),
+                        pt2=(px1 + pt_size[0] + 6, py1),
+                        color=box_color,
+                        thickness=cv2.FILLED,
+                    )
+                    cv2.putText(
+                        img_new,
+                        ptext,
+                        org=(px1 + 3, max(pt_size[1], py1 - 2)),
+                        fontFace=self.text_font,
+                        fontScale=0.42,
+                        color=(0, 0, 0) if is_vis else (255, 255, 255),
+                        thickness=1,
+                        lineType=cv2.LINE_AA,
+                    )
 
         return img_new
 
-    def triple_riding(self, img, preds, violation_list, rider_counts=None):
+    def triple_riding(self, img, preds, violation_list, rider_counts=None, plate_dict=None):
         img_new = img.copy()
         if violation_list is None or len(violation_list) == 0:
             return img_new
 
+        v_set = set(int(v) for v in violation_list)
         for obj in preds:
-            vid = obj[6]
-            if vid in violation_list:
+            vid = int(obj[6])
+            if vid in v_set:
                 bbox = obj[0:4]
+                bx1, by1, bx2, by2 = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
                 cnt = rider_counts.get(vid, 3) if rider_counts else 3
-                # draw highlight bounding box
-                img_new = self.draw_bounding_box(
-                    img_new, bbox=bbox, color=self.tr_bbox_color, thickness=3
-                )
+                # Full prominent square red bounding box
+                cv2.rectangle(img_new, (bx1, by1), (bx2, by2), (0, 0, 255), 3)
                 # draw badge
                 text_bbox = f"TRIPLE RIDING ({cnt} Riders)"
                 text_size, _ = cv2.getTextSize(
                     text_bbox, self.hv_text_font, self.hv_text_fontscale, self.hv_text_thickness
                 )
                 text_w, text_h = text_size
-                bx1, by1 = int(bbox[0]), int(bbox[1])
                 cv2.rectangle(
                     img_new,
                     pt1=(bx1, max(0, by1 - text_h - 6)),
@@ -120,6 +175,35 @@ class Annotator:
                     thickness=self.hv_text_thickness,
                     lineType=cv2.LINE_AA,
                 )
+                # draw plate if available
+                pinfo = None
+                if plate_dict:
+                    pinfo = plate_dict.get(vid) or plate_dict.get(obj[6])
+                if pinfo:
+                    pbox = pinfo["bbox"]
+                    is_vis = pinfo.get("is_visible", True) and pinfo.get("text") != "NOT VISIBLE"
+                    ptext = f"PLATE: {pinfo['text']}" if is_vis else "PLATE: NOT VISIBLE"
+                    box_color = (255, 200, 0) if is_vis else (120, 120, 120)
+                    cv2.rectangle(img_new, (int(pbox[0]), int(pbox[1])), (int(pbox[2]), int(pbox[3])), box_color, 2)
+                    pt_size, _ = cv2.getTextSize(ptext, self.text_font, 0.42, 1)
+                    px1, py1 = int(pbox[0]), int(pbox[1])
+                    cv2.rectangle(
+                        img_new,
+                        pt1=(px1, max(0, py1 - pt_size[1] - 4)),
+                        pt2=(px1 + pt_size[0] + 6, py1),
+                        color=box_color,
+                        thickness=cv2.FILLED,
+                    )
+                    cv2.putText(
+                        img_new,
+                        ptext,
+                        org=(px1 + 3, max(pt_size[1], py1 - 2)),
+                        fontFace=self.text_font,
+                        fontScale=0.42,
+                        color=(0, 0, 0) if is_vis else (255, 255, 255),
+                        thickness=1,
+                        lineType=cv2.LINE_AA,
+                    )
         return img_new
 
     def wrongway_detection(self, img, preds, direction_data, violation):

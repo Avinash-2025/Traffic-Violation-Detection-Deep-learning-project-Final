@@ -35,9 +35,9 @@
         <i data-lucide="layout-grid" style="width: 15px; height: 15px;"></i>
         <span>Overview</span>
       </button>
-      <button class="nav-tab-btn" id="nav-live" onclick="switchView('live')">
-        <i data-lucide="camera" style="width: 15px; height: 15px;"></i>
-        <span>Live Monitor</span>
+      <button class="nav-tab-btn" id="nav-dashboard" onclick="switchView('dashboard')">
+        <i data-lucide="layout-dashboard" style="width: 15px; height: 15px;"></i>
+        <span>Dashboard</span>
       </button>
       <button class="nav-tab-btn" id="nav-analyzer" onclick="switchView('analyzer')">
         <i data-lucide="file-video" style="width: 15px; height: 15px;"></i>
@@ -71,9 +71,9 @@
                 <i data-lucide="video" style="width: 16px; height: 16px;"></i>
                 <span>Open Video Analyzer</span>
               </button>
-              <button class="btn-secondary" onclick="switchView('live')">
-                <i data-lucide="camera" style="width: 16px; height: 16px;"></i>
-                <span>Launch Live Camera</span>
+              <button class="btn-secondary" onclick="switchView('dashboard')">
+                <i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i>
+                <span>Open Dashboard</span>
               </button>
             </div>
           </div>
@@ -138,19 +138,21 @@
         <h2 class="section-title-large">Surveillance Modes & Workflows</h2>
       </div>
       <div class="two-views-grid">
-        <div class="view-card" onclick="switchView('live')">
-          <div class="view-card-tag">CAMERA VIEW</div>
+        <div class="view-card" onclick="switchView('dashboard')">
+          <div class="view-card-tag">SYSTEM DASHBOARD</div>
           <div class="view-card-body">
-            <h3 class="view-card-title">Live camera surveillance</h3>
-            <p class="view-card-desc">Connect a webcam or run a procedural scenario at 1.6 fps. Tracker brackets, a threat meter and an audio alert fire the moment the signal spikes, and the incident is filed automatically.</p>
+            <h3 class="view-card-title">3. Dashboard</h3>
+            <p class="view-card-desc">The main overview of the entire system.</p>
             <ul class="view-card-features">
-              <li><i data-lucide="check"></i> <span>Webcam + 4 simulator scenarios</span></li>
-              <li><i data-lucide="check"></i> <span>On-screen tracker & threat meter</span></li>
-              <li><i data-lucide="check"></i> <span>Auto-filed incidents</span></li>
+              <li><i data-lucide="check"></i> <span>Total violations</span></li>
+              <li><i data-lucide="check"></i> <span>Helmet violations</span></li>
+              <li><i data-lucide="check"></i> <span>Triple riding violations</span></li>
+              <li><i data-lucide="check"></i> <span>Violation trends and charts</span></li>
+              <li><i data-lucide="check"></i> <span>Detected number plates registry (list order)</span></li>
             </ul>
           </div>
           <div class="view-card-action-link">
-            <span>OPEN LIVE MONITOR →</span>
+            <span>OPEN DASHBOARD →</span>
           </div>
         </div>
         <div class="view-card" onclick="switchView('analyzer')">
@@ -400,30 +402,68 @@
             </div>
           </div>
 
-          <!-- Present Video Evidence Folder Shortcut -->
-          <div class="card-session-folder-shortcut" id="card-session-folder" style="display: none;">
+          <!-- Shortcut Card 1: Incident History & Evidence Vault Shortcut -->
+          <div class="card-session-folder-shortcut" id="card-session-folder" onclick="openCurrentSessionInVault()">
             <div class="session-folder-header">
               <div class="session-folder-title-group">
-                <i data-lucide="folder" class="folder-main-icon" style="width: 16px; height: 16px;"></i>
-                <span class="session-folder-title">PRESENT VIDEO EVIDENCE FOLDER</span>
-              </div>
-              <span class="badge-folder-count" id="session-folder-badge">0 Snapshots</span>
-            </div>
-
-            <!-- Folder Shortcut Box (Desktop/Screen style folder shortcut) -->
-            <div class="session-folder-shortcut-bar" onclick="openCurrentSessionInVault()">
-              <div class="folder-shortcut-icon-box">
-                <i data-lucide="folder-archive" style="width: 22px; height: 22px; color: var(--color-emerald);"></i>
-              </div>
-              <div class="folder-shortcut-meta">
-                <div class="folder-shortcut-name" id="session-folder-name">No Video Loaded</div>
-                <div class="folder-shortcut-path" id="session-folder-path">Upload a video to initialize session storage</div>
+                <div class="folder-header-icon-box">
+                  <i data-lucide="archive" style="width: 16px; height: 16px; color: var(--color-emerald);"></i>
+                </div>
+                <div>
+                  <div class="session-folder-title">Incident Evidence Vault</div>
+                  <div class="session-folder-subtitle" id="session-folder-subtitle">Recorded snapshots & session archives</div>
+                </div>
               </div>
               <button class="btn-open-folder-link" type="button" title="Open in Incident History Vault">
-                <i data-lucide="external-link" style="width: 13px; height: 13px;"></i>
-                <span>Open Folder</span>
+                <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
+                <span id="session-folder-action-text">Open Vault</span>
               </button>
             </div>
+
+            <!-- Folder Shortcut Box -->
+            <div class="session-folder-shortcut-bar">
+              <div class="folder-shortcut-icon-box">
+                <i data-lucide="folder-archive" style="width: 20px; height: 20px; color: var(--color-emerald);"></i>
+              </div>
+              <div class="folder-shortcut-meta">
+                <div class="folder-shortcut-name" id="session-folder-name">Incident Vault Ready</div>
+                <div class="folder-shortcut-path" id="session-folder-path">Click to explore stored incident history</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Shortcut Card 2: 3. Dashboard & Plate Registry Shortcut Card -->
+          <div class="card-dashboard-shortcut" id="card-dashboard-shortcut" onclick="switchView('dashboard')">
+            <div class="db-shortcut-top-row">
+              <div class="db-shortcut-left">
+                <div class="db-shortcut-icon-box">
+                  <i data-lucide="layout-dashboard" style="width: 18px; height: 18px; color: var(--color-emerald);"></i>
+                </div>
+                <div class="db-shortcut-text-group">
+                  <div class="db-shortcut-title">3. Dashboard & Plate Registry</div>
+                  <div class="db-shortcut-desc">View full violation trends, charts & number plates list</div>
+                </div>
+              </div>
+              <div class="db-shortcut-action">
+                <button class="db-shortcut-pill-btn" type="button" title="Open 3. Dashboard">
+                  <i data-lucide="arrow-right" style="width: 12px; height: 12px;"></i>
+                  <span id="analyzer-plates-shortcut-badge">0 Plates</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Mini Live Plate & Telemetry Preview -->
+            <div class="db-shortcut-body" id="db-shortcut-body">
+              <div class="db-shortcut-preview-box" id="db-shortcut-preview-box">
+                <div class="db-preview-empty" id="db-preview-empty">
+                  <i data-lucide="scan-line" style="width: 16px; height: 16px; color: var(--color-emerald);"></i>
+                  <span>Live violation registry synchronized • Click to view trends & plates</span>
+                </div>
+                <div class="db-preview-plates" id="db-preview-plates" style="display: none;"></div>
+              </div>
+            </div>
+
+
           </div>
         </div>
       </div>
@@ -455,26 +495,229 @@
     </section>
 
     <!-- ====================================================================
-         VIEW 4: LIVE MONITOR
+         VIEW: 3. DASHBOARD (MAIN SYSTEM OVERVIEW)
          ==================================================================== -->
-    <section id="view-live" class="view-section">
-      <div class="section-headline-group">
-        <span class="section-tagline">LIVE SURVEILLANCE</span>
-        <h2 class="section-title-large">Real-time CCTV & Camera Monitor</h2>
-      </div>
-      <div class="live-monitor-container">
-        <div class="live-monitor-hero">
-          <div class="badge-analyzer-feed" style="position: absolute; top: 16px; right: 16px;">
-            <span class="feed-dot"></span>
-            <span>LIVE CAM FEED</span>
-          </div>
-          <img src="/video_feed" alt="Live Feed" class="live-camera-video">
+    <section id="view-dashboard" class="view-section">
+      <div class="dashboard-header-row">
+        <div>
+          <span class="section-tagline">SYSTEM INTELLIGENCE</span>
+          <h2 class="section-title-large">3. Dashboard</h2>
+          <p class="dashboard-subtitle">The main overview of the entire system: real-time violation metrics, classification trends, and evidentiary vehicle registry.</p>
         </div>
-        <div style="display: flex; gap: 12px; justify-content: center;">
-          <button class="btn-primary-emerald" onclick="switchView('analyzer')">
-            <i data-lucide="sliders" style="width: 15px; height: 15px;"></i>
-            <span>Switch to Forensic Video Analyzer</span>
+        <div class="dashboard-header-actions">
+          <button class="btn-secondary" onclick="switchView('analyzer')">
+            <i data-lucide="video" style="width: 14px; height: 14px;"></i>
+            <span>Open Video Analyzer</span>
           </button>
+          <button class="btn-primary-emerald" onclick="switchView('history')">
+            <i data-lucide="folder-archive" style="width: 14px; height: 14px;"></i>
+            <span>Incident Vault</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Top KPI Metrics Grid -->
+      <div class="dashboard-kpi-grid">
+        <!-- 1. Total Violations -->
+        <div class="dashboard-kpi-card card-kpi-total">
+          <div class="kpi-card-header">
+            <span class="kpi-label">TOTAL VIOLATIONS</span>
+            <div class="kpi-icon-box kpi-icon-total">
+              <i data-lucide="alert-triangle"></i>
+            </div>
+          </div>
+          <div class="kpi-val" id="db-stat-total">0</div>
+          <div class="kpi-sub">
+            <span class="kpi-pill kpi-pill-danger">Infractions</span>
+            <span class="kpi-meta-text">All violation types aggregated</span>
+          </div>
+        </div>
+
+        <!-- 2. Helmet Violations -->
+        <div class="dashboard-kpi-card card-kpi-helmet">
+          <div class="kpi-card-header">
+            <span class="kpi-label">HELMET VIOLATIONS</span>
+            <div class="kpi-icon-box kpi-icon-helmet">
+              <i data-lucide="shield-alert"></i>
+            </div>
+          </div>
+          <div class="kpi-val" id="db-stat-helmet">0</div>
+          <div class="kpi-sub">
+            <span class="kpi-pill kpi-pill-amber">Rider Safety</span>
+            <span class="kpi-meta-text">Unprotected two-wheeler riders</span>
+          </div>
+        </div>
+
+        <!-- 3. Triple Riding Violations -->
+        <div class="dashboard-kpi-card card-kpi-triple">
+          <div class="kpi-card-header">
+            <span class="kpi-label">TRIPLE RIDING VIOLATIONS</span>
+            <div class="kpi-icon-box kpi-icon-triple">
+              <i data-lucide="users"></i>
+            </div>
+          </div>
+          <div class="kpi-val" id="db-stat-triple">0</div>
+          <div class="kpi-sub">
+            <span class="kpi-pill kpi-pill-purple">Passenger Limit</span>
+            <span class="kpi-meta-text">3+ riders on motorcycle</span>
+          </div>
+        </div>
+
+        <!-- 4. Signal & Flow Violations -->
+        <div class="dashboard-kpi-card card-kpi-signal">
+          <div class="kpi-card-header">
+            <span class="kpi-label">SIGNAL JUMPS & FLOW</span>
+            <div class="kpi-icon-box kpi-icon-signal">
+              <i data-lucide="traffic-cone"></i>
+            </div>
+          </div>
+          <div class="kpi-val" id="db-stat-signal">0</div>
+          <div class="kpi-sub">
+            <span class="kpi-pill kpi-pill-emerald">Red Light / Flow</span>
+            <span class="kpi-meta-text">Stop line & wrong-way crosses</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Violation Trends and Charts Row -->
+      <div class="dashboard-charts-grid">
+        <!-- Left: Breakdown Chart & Distribution -->
+        <div class="dashboard-chart-card">
+          <div class="chart-card-header">
+            <div class="chart-card-title-group">
+              <i data-lucide="pie-chart" style="width: 16px; height: 16px; color: var(--color-emerald);"></i>
+              <span class="chart-card-title">Violation Distribution & Category Breakdown</span>
+            </div>
+            <span class="pill-active-badge" id="db-breakdown-badge">4 Heuristics Active</span>
+          </div>
+          <div class="chart-breakdown-body">
+            <!-- Dynamic Stacked Bar Indicator -->
+            <div class="db-breakdown-bar-track">
+              <div class="db-bar-seg seg-helmet" id="db-bar-helmet" style="width: 0%;" title="Helmet Violations"></div>
+              <div class="db-bar-seg seg-triple" id="db-bar-triple" style="width: 0%;" title="Triple Riding"></div>
+              <div class="db-bar-seg seg-red" id="db-bar-red" style="width: 0%;" title="Red Light Signal Jumps"></div>
+              <div class="db-bar-seg seg-wrong" id="db-bar-wrong" style="width: 0%;" title="Wrong Way Driving"></div>
+            </div>
+
+            <!-- Category Rows with Progress Bars -->
+            <div class="db-category-list">
+              <div class="db-cat-row">
+                <div class="db-cat-meta">
+                  <span class="cat-dot dot-helmet"></span>
+                  <span class="cat-name">No Helmet Violations</span>
+                </div>
+                <div class="db-cat-stats">
+                  <span class="cat-count" id="db-cat-helmet-count">0</span>
+                  <span class="cat-pct" id="db-cat-helmet-pct">(0%)</span>
+                </div>
+              </div>
+              <div class="db-cat-row">
+                <div class="db-cat-meta">
+                  <span class="cat-dot dot-triple"></span>
+                  <span class="cat-name">Triple Riding Violations</span>
+                </div>
+                <div class="db-cat-stats">
+                  <span class="cat-count" id="db-cat-triple-count">0</span>
+                  <span class="cat-pct" id="db-cat-triple-pct">(0%)</span>
+                </div>
+              </div>
+              <div class="db-cat-row">
+                <div class="db-cat-meta">
+                  <span class="cat-dot dot-red"></span>
+                  <span class="cat-name">Red Light / Signal Jumps</span>
+                </div>
+                <div class="db-cat-stats">
+                  <span class="cat-count" id="db-cat-red-count">0</span>
+                  <span class="cat-pct" id="db-cat-red-pct">(0%)</span>
+                </div>
+              </div>
+              <div class="db-cat-row">
+                <div class="db-cat-meta">
+                  <span class="cat-dot dot-wrong"></span>
+                  <span class="cat-name">Wrong Way Traffic Flow</span>
+                </div>
+                <div class="db-cat-stats">
+                  <span class="cat-count" id="db-cat-wrong-count">0</span>
+                  <span class="cat-pct" id="db-cat-wrong-pct">(0%)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Violation Activity Trends & System Health -->
+        <div class="dashboard-chart-card">
+          <div class="chart-card-header">
+            <div class="chart-card-title-group">
+              <i data-lucide="trending-up" style="width: 16px; height: 16px; color: var(--color-emerald);"></i>
+              <span class="chart-card-title">Violation Trends & Real-time Timeline</span>
+            </div>
+            <span class="pill-active-badge" id="db-threat-badge">NORMAL</span>
+          </div>
+          <div class="chart-trend-body">
+            <div class="trend-spark-container">
+              <!-- Visual SVG Activity Waveform Chart -->
+              <svg class="db-trend-svg" id="db-trend-svg" viewBox="0 0 500 120" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="trend-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#10B981" stop-opacity="0.38"></stop>
+                    <stop offset="100%" stop-color="#10B981" stop-opacity="0.0"></stop>
+                  </linearGradient>
+                </defs>
+                <path id="db-trend-area" d="M 0 110 L 500 110" fill="url(#trend-grad)"></path>
+                <path id="db-trend-line" d="M 0 110 L 500 110" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round"></path>
+              </svg>
+            </div>
+            <div class="trend-micro-grid">
+              <div class="trend-micro-item">
+                <span class="trend-micro-label">SAMPLING ENGINE</span>
+                <span class="trend-micro-val" id="db-stream-fps">30.0 FPS</span>
+              </div>
+              <div class="trend-micro-item">
+                <span class="trend-micro-label">SYSTEM HEALTH</span>
+                <span class="trend-micro-val" style="color: var(--color-emerald);">100% OPERATIONAL</span>
+              </div>
+              <div class="trend-micro-item">
+                <span class="trend-micro-label">MODELS ENGAGED</span>
+                <span class="trend-micro-val">4 FIXED YOLOV5</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detected Number Plates Registry (in list order) -->
+      <div class="dashboard-plates-section">
+        <div class="dashboard-plates-card">
+          <div class="plates-section-header">
+            <div class="plates-header-title-group">
+              <div class="plates-header-icon-box">
+                <i data-lucide="scan-line" style="width: 18px; height: 18px; color: var(--color-emerald);"></i>
+              </div>
+              <div>
+                <h3 class="plates-section-title">Detected Number Plates Registry</h3>
+                <p class="plates-section-desc">Chronological list of all vehicle registration plates captured during verified traffic violations.</p>
+              </div>
+            </div>
+            <div class="plates-header-actions">
+              <span class="badge-folder-count" id="db-plates-count-badge">0 Plates Logged</span>
+            </div>
+          </div>
+
+          <!-- List Order Container for Detected Plates -->
+          <div class="dashboard-plates-list" id="db-plates-list-container">
+            <div class="plate-item-empty" id="db-plates-empty-state">
+              <i data-lucide="credit-card" style="width: 28px; height: 28px; color: var(--text-muted); margin-bottom: 8px;"></i>
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">No Number Plates Detected Yet</span>
+              <p style="font-size: 11px; color: var(--text-muted); margin-top: 3px; max-width: 420px; text-align: center;">
+                Load and play a surveillance clip in the Video Analyzer. Any vehicle committing a helmet, triple riding, or red light violation will have its license plate evaluated and logged here in chronological list order.
+              </p>
+              <button class="btn-primary-emerald" onclick="switchView('analyzer')" style="margin-top: 14px; padding: 7px 18px; font-size: 12px;">
+                <i data-lucide="video" style="width: 14px; height: 14px;"></i>
+                <span>Open Video Analyzer</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -538,6 +781,18 @@
               <button class="tool-btn zoom-btn" id="wiz-zoom-reset" onclick="resetWizardZoom()" title="Reset Zoom">Fit</button>
             </div>
 
+            <!-- Undo & Redo Controls (ONLY in Wizard Popup View!) -->
+            <div class="wizard-undo-redo-group" style="display: flex; align-items: center; gap: 4px;">
+              <button class="tool-btn" id="wiz-tool-undo" onclick="undoMarkup()" title="Undo Last Change (Ctrl+Z)">
+                <i data-lucide="undo-2" style="width: 12px; height: 12px;"></i>
+                <span>Undo</span>
+              </button>
+              <button class="tool-btn" id="wiz-tool-redo" onclick="redoMarkup()" title="Redo Last Change (Ctrl+Y)">
+                <i data-lucide="redo-2" style="width: 12px; height: 12px;"></i>
+                <span>Redo</span>
+              </button>
+            </div>
+
             <button class="tool-btn tool-btn-danger" onclick="clearMarkup()">
               <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
               <span>Clear</span>
@@ -553,48 +808,96 @@
 
         <!-- Right: Step-by-Step Guide -->
         <div class="wizard-guide-panel">
-          <div style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">MARKUP SETUP GUIDE</div>
-
-          <div class="guide-step active-step" id="guide-step-1" onclick="setWizardTool('stopline')">
-            <span class="guide-step-num">1</span>
-            <span class="guide-step-title">Draw Stop Line</span>
-            <div class="guide-step-desc">Click two points on the road to place the red stop line. Vehicles crossing this line during a RED signal are recorded as infractions.</div>
-            <div class="guide-step-hint">Click Stop Line tool, then click 2 points on the road →</div>
-          </div>
-
-          <div class="guide-step" id="guide-step-2" onclick="setWizardTool('signal')">
-            <span class="guide-step-num">2</span>
-            <span class="guide-step-title">Select Traffic Signal (Point Click)</span>
-            <div class="guide-step-desc">Click directly on the traffic light in the video or zoom in for precision. Point selection automatically centers the ROI target box over the lamp housing.</div>
-            <div class="guide-step-hint">Click directly on the traffic signal lamp →</div>
-          </div>
-
-          <div class="guide-step" id="guide-step-3" onclick="setWizardTool('detection')">
-            <span class="guide-step-num">3</span>
-            <span class="guide-step-title">Detection Area (Optional)</span>
-            <div class="guide-step-desc">Click boundary points to focus vehicle surveillance on specific road lanes. Double-click to close polygon (defaults to full video frame).</div>
-            <div class="guide-step-hint">Click points around road zone, double-click to finish →</div>
-          </div>
-
-          <div class="guide-step" id="guide-step-4" onclick="setWizardTool('direction')">
-            <span class="guide-step-num">4</span>
-            <span class="guide-step-title">Set Traffic Direction (Optional)</span>
-            <div class="guide-step-desc">Drag an arrow in the permitted road flow direction. If left unconfigured, wrong-way detection remains disabled to prevent false positives.</div>
-            <div class="guide-step-hint">Drag arrow from start to end in flow direction →</div>
-          </div>
-
-          <div style="flex: 1;"></div>
-
-          <div style="background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 11px;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-              <i data-lucide="info" style="width: 14px; height: 14px; color: var(--color-emerald);"></i>
-              <span style="font-weight: 700; color: var(--color-cream);">Surveillance Guidance</span>
+          <div class="wizard-guide-header">
+            <div class="guide-header-title-row">
+              <i data-lucide="compass" style="width: 15px; height: 15px; color: var(--color-emerald);"></i>
+              <span class="guide-header-title">MARKUP SETUP GUIDE</span>
             </div>
-            <ul style="color: var(--text-muted); line-height: 1.7; padding-left: 16px;">
-              <li>Full video frame is monitored by default</li>
-              <li>Use Zoom buttons (1.5x / 2.0x / 2.5x) to easily pinpoint small signal lamps</li>
-              <li>Reposition handles anytime using Normal View</li>
-              <li>Re-open wizard anytime using "Edit Markup"</li>
+            <span class="guide-header-tag">Interactive Step-by-Step</span>
+          </div>
+
+          <!-- Step 1: Draw Stop Line -->
+          <div class="guide-step active-step" id="guide-step-1" onclick="setWizardTool('stopline')">
+            <div class="guide-step-head">
+              <div class="guide-step-num">1</div>
+              <div class="guide-step-meta">
+                <span class="guide-step-title">Draw Stop Line</span>
+                <span class="guide-step-status-badge status-active">Active Tool</span>
+              </div>
+            </div>
+            <div class="guide-step-desc">
+              Click two points across the road to draw the red stop line. Vehicles crossing this line during a RED signal are recorded as infractions.
+            </div>
+            <div class="guide-step-action-callout">
+              <i data-lucide="mouse-pointer-click" style="width: 13px; height: 13px;"></i>
+              <span>Select tool & click 2 points on road</span>
+            </div>
+          </div>
+
+          <!-- Step 2: Select Traffic Signal -->
+          <div class="guide-step" id="guide-step-2" onclick="setWizardTool('signal')">
+            <div class="guide-step-head">
+              <div class="guide-step-num">2</div>
+              <div class="guide-step-meta">
+                <span class="guide-step-title">Select Traffic Signal</span>
+                <span class="guide-step-status-badge">Point Click</span>
+              </div>
+            </div>
+            <div class="guide-step-desc">
+              Click directly on the traffic light in the video or zoom in for precision. Point selection automatically centers the ROI target box over the lamp housing.
+            </div>
+            <div class="guide-step-action-callout">
+              <i data-lucide="crosshair" style="width: 13px; height: 13px;"></i>
+              <span>Click directly on traffic signal lamp</span>
+            </div>
+          </div>
+
+          <!-- Step 3: Detection Area -->
+          <div class="guide-step" id="guide-step-3" onclick="setWizardTool('detection')">
+            <div class="guide-step-head">
+              <div class="guide-step-num">3</div>
+              <div class="guide-step-meta">
+                <span class="guide-step-title">Detection Area</span>
+                <span class="guide-step-status-badge status-optional">Optional</span>
+              </div>
+            </div>
+            <div class="guide-step-desc">
+              Click boundary points to focus surveillance on specific lanes. Double-click to close polygon (defaults to full video frame if omitted).
+            </div>
+            <div class="guide-step-action-callout">
+              <i data-lucide="scan" style="width: 13px; height: 13px;"></i>
+              <span>Click lane points, double-click to finish</span>
+            </div>
+          </div>
+
+          <!-- Step 4: Traffic Direction -->
+          <div class="guide-step" id="guide-step-4" onclick="setWizardTool('direction')">
+            <div class="guide-step-head">
+              <div class="guide-step-num">4</div>
+              <div class="guide-step-meta">
+                <span class="guide-step-title">Set Flow Direction</span>
+                <span class="guide-step-status-badge status-optional">Optional</span>
+              </div>
+            </div>
+            <div class="guide-step-desc">
+              Drag an arrow along the legal road direction. If left unconfigured, wrong-way detection remains disabled to prevent false alarms.
+            </div>
+            <div class="guide-step-action-callout">
+              <i data-lucide="arrow-right" style="width: 13px; height: 13px;"></i>
+              <span>Drag arrow in allowable flow direction</span>
+            </div>
+          </div>
+
+          <!-- Pro Setup Tips Card -->
+          <div class="wizard-tips-card">
+            <div class="wizard-tips-title">
+              <i data-lucide="lightbulb" style="width: 15px; height: 15px; color: var(--color-emerald);"></i>
+              <span>Pro Setup Tips</span>
+            </div>
+            <ul class="wizard-tips-list">
+              <li>Use the <strong>Zoom buttons (1.5x / 2.0x / Fit)</strong> above the video to easily pinpoint distant traffic signal lights.</li>
+              <li>Press <strong>Ctrl+Z / Ctrl+Y</strong> or use Undo/Redo buttons to adjust points anytime.</li>
+              <li>Click <strong>Normal View</strong> to drag or fine-tune existing anchor handles.</li>
             </ul>
           </div>
         </div>
